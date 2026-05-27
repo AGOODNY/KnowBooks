@@ -1,0 +1,94 @@
+/* ===== CSS Variables ===== */
+:root {
+  --color-dark: #2d2c28;
+  --color-light: #fefdfb;
+  --color-bg-secondary: #fcfaf5;
+  --color-mid-gray: #8c8982;
+  --color-light-gray: #e8e4db;
+  --color-accent-orange: #d9704a;
+
+  --font-heading: 'Poppins', -apple-system, sans-serif;
+  --font-body: 'Lora', 'Inter', serif;
+
+  --max-width: 1200px;
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+
+/* ===== Reset & Base ===== */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-light);
+  color: var(--color-dark);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+input, textarea, select {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
+/* ===== Utility Classes ===== */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.section-title {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-dark);
+  margin-bottom: 1.25rem;
+}
+
+/* ===== App Layout ===== */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  padding-top: 64px;
+}
