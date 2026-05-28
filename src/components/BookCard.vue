@@ -1,3 +1,56 @@
+<template>
+  <router-link v-if="size === 'compact'" :to="`/book/${book.id}`" class="book-card book-card--compact">
+    <div class="book-card-cover book-card-cover--compact">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" class="cover-icon">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      </svg>
+    </div>
+    <div class="book-card-info book-card-info--compact">
+      <h3 class="book-card-title">{{ book.title }}</h3>
+      <p class="book-card-author">{{ book.author }}</p>
+      <div class="book-card-meta">
+        <span class="book-card-rating book-card-rating--compact" :title="`${book.rating}/5`"><span class="rating-star">&#9733;</span> {{ book.rating }}</span>
+      </div>
+    </div>
+  </router-link>
+
+  <router-link v-else :to="`/book/${book.id}`" :class="['book-card', `book-card--${size}`]">
+    <div class="book-card-cover">
+      <span class="cover-placeholder">Not uploaded</span>
+    </div>
+    <div class="book-card-info">
+      <h3 class="book-card-title">{{ book.title }}</h3>
+      <p class="book-card-author">{{ book.author }}</p>
+      <div class="book-card-meta">
+        <span class="book-card-rating" :title="`${book.rating}/5`">
+          {{ starDisplay }}
+        </span>
+        <span class="book-card-likes">
+          {{ book.likes }} likes
+        </span>
+      </div>
+      <div v-if="book.tags && book.tags.length > 0" class="book-card-tags">
+        <span v-for="tag in book.tags" :key="tag.id" class="book-card-tag">{{ tag.name }}</span>
+      </div>
+    </div>
+  </router-link>
+</template>
+
+<script setup>
+import { computed } from 'vue'
+
+const props = defineProps({
+  book: Object,
+  size: { type: String, default: 'default' },
+})
+
+const starDisplay = computed(() =>
+  '★'.repeat(Math.round(props.book.rating)) + '☆'.repeat(5 - Math.round(props.book.rating))
+)
+</script>
+
+<style scoped>
 .book-card {
   display: flex;
   flex-direction: column;
@@ -160,3 +213,4 @@
 .rating-star {
   color: var(--color-accent-orange);
 }
+</style>

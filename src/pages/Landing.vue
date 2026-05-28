@@ -1,3 +1,103 @@
+<template>
+  <div class="landing">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-inner container">
+        <div class="hero-text">
+          <h1 class="hero-title">
+            Discover your<br /><span class="highlight">next great read</span>
+          </h1>
+          <p class="hero-subtitle">
+            From an ocean of books, find the ones truly worth your time.
+          </p>
+          <p class="hero-tagline">
+            Smart recommendations &middot; Authentic reviews &middot; Collection management &middot; Reader community
+          </p>
+          <div class="hero-actions">
+            <button class="btn-hero-primary" @click="router.push('/home')">Start exploring</button>
+            <button class="btn-hero-secondary" @click="scrollToFeatures">Learn more</button>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="hero-graphic">
+            <div class="hero-book hero-book--1"></div>
+            <div class="hero-book hero-book--2"></div>
+            <div class="hero-book hero-book--3"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature Highlights -->
+    <section id="features" ref="featuresRef" class="features">
+      <div class="container">
+        <div class="features-header">
+          <h2 class="features-heading">Everything you need to read better</h2>
+          <p class="features-subheading">
+            Knowbooks combines intelligent technology with a thoughtful reading experience.
+          </p>
+        </div>
+        <div class="features-grid">
+          <div v-for="(feature, index) in mockFeatureHighlights" :key="index" class="feature-card">
+            <div
+              class="feature-icon"
+              :style="{ background: feature.bgColor, color: feature.iconColor }"
+            >
+              <!-- Recommend icon -->
+              <svg v-if="feature.iconKey === 'recommend'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+              <!-- Review icon -->
+              <svg v-else-if="feature.iconKey === 'review'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <!-- Collection icon -->
+              <svg v-else-if="feature.iconKey === 'collection'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+              <!-- Community icon -->
+              <svg v-else-if="feature.iconKey === 'community'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </div>
+            <h3 class="feature-title">{{ feature.title }}</h3>
+            <p class="feature-desc">{{ feature.description }}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+      <div class="container footer-inner">
+        <span class="footer-brand">KnowBooks</span>
+        <nav class="footer-links">
+          <a href="#about">About</a>
+          <a href="#privacy">Privacy Policy</a>
+          <a href="#terms">Terms</a>
+        </nav>
+      </div>
+    </footer>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { mockFeatureHighlights } from '../data/mockData'
+
+const router = useRouter()
+const featuresRef = ref(null)
+
+function scrollToFeatures() {
+  featuresRef.value?.scrollIntoView({ behavior: 'smooth' })
+}
+</script>
+
+<style scoped>
 /* ===== Hero ===== */
 .hero {
   min-height: calc(100vh - 64px);
@@ -27,7 +127,6 @@
   margin-bottom: 1.25rem;
 }
 
-.hero-title em,
 .hero-title .highlight {
   color: var(--color-accent-orange);
   font-style: normal;
@@ -277,3 +376,4 @@
     grid-template-columns: 1fr;
   }
 }
+</style>

@@ -1,3 +1,56 @@
+<template>
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <div class="navbar-left">
+        <button
+          v-if="!isLanding"
+          class="nav-back-btn"
+          @click="router.back()"
+          title="Go back"
+        >
+          &larr;
+        </button>
+        <router-link :to="isLanding ? '/' : '/home'" class="navbar-brand">
+          KnowBooks
+        </router-link>
+      </div>
+
+      <div v-if="!isLanding" class="navbar-center">
+        <SearchBar />
+      </div>
+
+      <div class="navbar-right">
+        <template v-if="isLanding">
+          <button class="btn-text" @click="router.push('/home')">Log in</button>
+          <button class="btn-primary btn-sm" @click="router.push('/home')">Sign up</button>
+        </template>
+        <div v-else class="navbar-user">
+          <div class="user-avatar">U</div>
+          <span class="user-name">User</span>
+          <div class="user-dropdown">
+            <router-link to="/profile">Profile</router-link>
+            <router-link to="/upload">My Uploads</router-link>
+            <router-link to="/admin">Admin</router-link>
+            <hr />
+            <button class="btn-logout">Log out</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</template>
+
+<script setup>
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import SearchBar from './SearchBar.vue'
+
+const route = useRoute()
+const router = useRouter()
+const isLanding = computed(() => route.path === '/')
+</script>
+
+<style scoped>
 .navbar {
   position: fixed;
   top: 0;
@@ -11,6 +64,7 @@
 }
 
 .navbar-inner {
+  width: 100%;
   max-width: var(--max-width);
   margin: 0 auto;
   padding: 0 1.5rem;
@@ -138,17 +192,41 @@
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 0.5rem;
+  padding-top: 0.5rem;
   background: var(--color-light);
   border: 1px solid var(--color-light-gray);
   border-radius: var(--radius);
-  padding: 0.5rem 0;
+  margin-top: 0;
   min-width: 160px;
   box-shadow: 0 4px 12px rgba(20, 20, 19, 0.06);
 }
 
+.user-dropdown::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0.5rem;
+  background: transparent;
+}
+
 .navbar-user:hover .user-dropdown {
   display: block;
+}
+
+/* Keep the actual menu content below the bridge */
+.user-dropdown > * {
+  position: relative;
+  z-index: 1;
+}
+
+.user-dropdown hr {
+  border: none;
+  border-top: 1px solid var(--color-light-gray);
+  margin: 0.25rem 0;
+  position: relative;
+  z-index: 1;
 }
 
 .user-dropdown a,
@@ -170,12 +248,7 @@
   background: var(--color-light-gray);
 }
 
-.user-dropdown hr {
-  border: none;
-  border-top: 1px solid var(--color-light-gray);
-  margin: 0.25rem 0;
-}
-
 .btn-logout {
   color: var(--color-accent-orange) !important;
 }
+</style>

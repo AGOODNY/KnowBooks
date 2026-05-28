@@ -1,4 +1,5 @@
 node_modules
 dist
 .DS_Store
+.vite
 规划遵循

@@ -1,3 +1,24 @@
+<template>
+  <p v-if="!tags || tags.length === 0" class="tag-cloud-empty">No tags available.</p>
+  <div v-else class="tag-cloud">
+    <router-link
+      v-for="tag in tags"
+      :key="tag.id"
+      :to="`/search?tag=${encodeURIComponent(tag.name)}`"
+      class="tag-cloud-item"
+    >
+      {{ tag.name }}
+    </router-link>
+  </div>
+</template>
+
+<script setup>
+defineProps({
+  tags: Array,
+})
+</script>
+
+<style scoped>
 .tag-cloud {
   display: flex;
   flex-wrap: wrap;
@@ -26,3 +47,4 @@
   border-color: var(--color-accent-orange);
   color: #fff;
 }
+</style>

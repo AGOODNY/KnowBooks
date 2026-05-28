@@ -1,3 +1,21 @@
+<template>
+  <div class="placeholder">
+    <div class="placeholder-inner">
+      <span class="placeholder-icon">{{ icon }}</span>
+      <h2 class="placeholder-title">{{ pageTitle }}</h2>
+      <p class="placeholder-text">Page under development...</p>
+    </div>
+  </div>
+</template>
+
+<script setup>
+defineProps({
+  pageTitle: String,
+  icon: { type: String, default: '\u{1F4C4}' },
+})
+</script>
+
+<style scoped>
 .placeholder {
   display: flex;
   align-items: center;
@@ -28,3 +46,4 @@
   color: var(--color-mid-gray);
   font-size: 0.95rem;
 }
+</style>
