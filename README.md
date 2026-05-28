@@ -51,7 +51,7 @@ npm install
 # 启动开发服务器
 npm run dev
 
-浏览器访问 http://localhost:5173。
+访问 http://localhost:5173。
 ```
 
 ### 生产构建
