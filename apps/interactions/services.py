@@ -1,7 +1,10 @@
 from django.db.models import Avg
 from apps.recommendations.models import Book
-from .models import Like, Favorite, Rating
+from django.contrib.auth import get_user_model
 
+from .models import Like, Favorite, Rating, Comment
+
+User = get_user_model()
 
 def update_book_like_count(book_id):
 
@@ -41,4 +44,40 @@ def update_book_rating(book_id):
         id=book_id
     ).update(
         average_rating=avg or 0
+    )
+
+def update_user_like_count(user_id):
+
+    count = Like.objects.filter(
+        user_id=user_id
+    ).count()
+
+    User.objects.filter(
+        id=user_id
+    ).update(
+        likes_count=count
+    )
+
+def update_user_favorite_count(user_id):
+
+    count = Favorite.objects.filter(
+        user_id=user_id
+    ).count()
+
+    User.objects.filter(
+        id=user_id
+    ).update(
+        favorites_count=count
+    )
+
+def update_user_comment_count(user_id):
+
+    count = Comment.objects.filter(
+        user_id=user_id
+    ).count()
+
+    User.objects.filter(
+        id=user_id
+    ).update(
+        comments_count=count
     )

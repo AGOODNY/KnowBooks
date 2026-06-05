@@ -12,7 +12,7 @@ class User(AbstractUser):
     books_read_count = models.PositiveIntegerField(default=0)
     likes_count = models.PositiveIntegerField(default=0)
     favorites_count = models.PositiveIntegerField(default=0)
-
+    comments_count = models.PositiveIntegerField(default=0)
     # 权限 / 状态
     is_email_verified = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
