@@ -15,6 +15,8 @@ from .serializers import (
 from .permissions import IsAdminUser
 from apps.interactions.models import Like, Favorite
 from django.db.models import Q
+from django.db.models import Count
+from django.core.paginator import Paginator
 
 #首页接口
 class HomeView(APIView):
@@ -43,45 +45,202 @@ class HomeView(APIView):
 
 #协同过滤
     def recommend_books(self, user):
-        # 用户喜欢的书
-        liked_books = Like.objects.filter(user=user).values_list('book_id', flat=True)
-        fav_books = Favorite.objects.filter(user=user).values_list('book_id', flat=True)
 
-        user_books = set(list(liked_books) + list(fav_books))
+        liked_books = Like.objects.filter(
+            user=user
+        ).values_list(
+            'book_id',
+            flat=True
+        )
+
+        fav_books = Favorite.objects.filter(
+            user=user
+        ).values_list(
+            'book_id',
+            flat=True
+        )
+
+        user_books = set(
+            list(liked_books)
+            +
+            list(fav_books)
+        )
 
         if not user_books:
-            return Book.objects.order_by('-likes_count')[:10]
+            return Book.objects.filter(
+                status="approved"
+            ).order_by(
+                '-likes_count'
+            )[:10]
 
-        # 找“相似用户”
         similar_users = Like.objects.filter(
             book_id__in=user_books
-        ).exclude(user=user).values_list('user_id', flat=True)
+        ).exclude(
+            user=user
+        ).values_list(
+            'user_id',
+            flat=True
+        )
 
-        # 找这些用户喜欢的书
-        recommended_books = Like.objects.filter(
+        collaborative_ids = Like.objects.filter(
             user_id__in=similar_users
-        ).exclude(book_id__in=user_books).values_list('book_id', flat=True)
+        ).exclude(
+            book_id__in=user_books
+        ).values_list(
+            'book_id',
+            flat=True
+        )
 
-        return Book.objects.filter(id__in=recommended_books)[:10]
+        preferred_tags = Tag.objects.filter(
+            books__id__in=user_books
+        ).annotate(
+            freq=Count('id')
+        ).order_by(
+            '-freq'
+        )[:5]
+
+        tag_books = Book.objects.filter(
+            tags__in=preferred_tags,
+            status="approved"
+        ).exclude(
+            id__in=user_books
+        )
+
+        final_books = Book.objects.filter(
+            Q(id__in=collaborative_ids)
+            |
+            Q(id__in=tag_books)
+        ).distinct()[:10]
+
+        return final_books
 
 #搜索
 class SearchView(APIView):
+
     def get(self, request):
-        keyword = request.GET.get('q', '')
+
+        keyword = request.GET.get(
+            "keyword",
+            ""
+        )
+
+        tag = request.GET.get(
+            "tag"
+        )
+
+        author = request.GET.get(
+            "author"
+        )
+
+        min_rating = request.GET.get(
+            "min_rating"
+        )
+
+        ordering = request.GET.get(
+            "ordering"
+        )
+
+        page = int(
+            request.GET.get(
+                "page",
+                1
+            )
+        )
 
         books = Book.objects.filter(
-            Q(title__icontains=keyword) |
-            Q(author__icontains=keyword) |
-            Q(tags__name__icontains=keyword)
-        ).distinct()
+            status="approved"
+        )
 
-        serializer = BookSerializer(books, many=True)
-        return Response(serializer.data)
+        if keyword:
+
+            books = books.filter(
+                Q(title__icontains=keyword)
+                |
+                Q(author__icontains=keyword)
+                |
+                Q(tags__name__icontains=keyword)
+            )
+
+        if tag:
+
+            books = books.filter(
+                tags__name=tag
+            )
+
+        if author:
+
+            books = books.filter(
+                author__icontains=author
+            )
+
+        if min_rating:
+
+            books = books.filter(
+                average_rating__gte=min_rating
+            )
+
+        if ordering == "latest":
+
+            books = books.order_by(
+                "-created_at"
+            )
+
+        elif ordering == "rating":
+
+            books = books.order_by(
+                "-average_rating"
+            )
+
+        elif ordering == "hot":
+
+            books = books.order_by(
+                "-likes_count",
+                "-favorites_count"
+            )
+
+        paginator = Paginator(
+            books.distinct(),
+            10
+        )
+
+        page_obj = paginator.get_page(
+            page
+        )
+
+        serializer = BookSerializer(
+            page_obj.object_list,
+            many=True
+        )
+
+        return Response({
+            "count": paginator.count,
+            "current_page": page,
+            "filters": {
+                "keyword": keyword,
+                "tag": tag,
+                "author": author,
+                "min_rating": min_rating,
+                "ordering": ordering
+            },
+            "results": serializer.data
+        })
 
 #书籍详情
 class BookDetailView(APIView):
     def get(self, request, book_id):
-        book = Book.objects.get(id=book_id)
+        if (
+                request.user.is_authenticated
+                and
+                request.user.is_staff
+        ):
+            book = Book.objects.get(
+                id=book_id
+            )
+        else:
+            book = Book.objects.get(
+                id=book_id,
+                status="approved"
+            )
 
         data = BookSerializer(book).data
 
@@ -112,7 +271,17 @@ class BookViewSet(viewsets.ModelViewSet):
         )
 
     def get_queryset(self):
+
         queryset = Book.objects.all()
+
+        if not (
+                self.request.user.is_authenticated
+                and
+                self.request.user.is_staff
+        ):
+            queryset = queryset.filter(
+                status="approved"
+            )
 
         keyword = self.request.GET.get(
             "keyword"
@@ -128,6 +297,71 @@ class BookViewSet(viewsets.ModelViewSet):
             ).distinct()
 
         return queryset
+
+    def perform_create(
+            self,
+            serializer
+    ):
+
+        serializer.save(
+            uploaded_by=self.request.user,
+            status="pending"
+        )
+
+    def update(
+            self,
+            request,
+            *args,
+            **kwargs
+    ):
+
+        book = self.get_object()
+
+        if (
+                book.uploaded_by != request.user
+                and
+                not request.user.is_staff
+        ):
+            return Response(
+                {
+                    "error": "Permission denied"
+                },
+                status=403
+            )
+
+        return super().update(
+            request,
+            *args,
+            **kwargs
+        )
+
+    def destroy(
+            self,
+            request,
+            *args,
+            **kwargs
+    ):
+
+        book = self.get_object()
+
+        if (
+                book.uploaded_by != request.user
+                and
+                not request.user.is_staff
+        ):
+            return Response(
+                {
+                    "error": "Permission denied"
+                },
+                status=403
+            )
+
+        return super().destroy(
+            request,
+            *args,
+            **kwargs
+        )
+
 
     @action(
         detail=True,
@@ -201,8 +435,50 @@ class BookViewSet(viewsets.ModelViewSet):
             serializer.data
         )
 
-    #新增
+#新增
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
 
     serializer_class = TagSerializer
+
+# 标签云接口
+class TagCloudView(APIView):
+
+    def get(self, request):
+
+        tags = Tag.objects.annotate(
+            book_count=Count("books")
+        ).order_by(
+            "-book_count"
+        )
+
+        data = []
+
+        for tag in tags:
+
+            data.append({
+                "id": tag.id,
+                "name": tag.name,
+                "count": tag.book_count
+            })
+
+        return Response(data)
+
+# 标签聚合页（注：后面前端用不上就删掉）
+class TagBooksView(APIView):
+
+    def get(self, request, tag_id):
+
+        books = Book.objects.filter(
+            tags__id=tag_id,
+            status="approved"
+        )
+
+        serializer = BookSerializer(
+            books,
+            many=True
+        )
+
+        return Response(
+            serializer.data
+        )

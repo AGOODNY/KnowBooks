@@ -5,45 +5,72 @@ from rest_framework import permissions
 from .models import *
 from .serializers import CommentSerializer
 from django.db.models import Avg
+from .services import update_book_like_count
+from .services import update_book_favorite_count
+from .services import update_book_rating
 
 #点赞与取消点赞
 class ToggleLikeView(APIView):
+
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, book_id):
+
         obj, created = Like.objects.get_or_create(
             user=request.user,
             book_id=book_id
         )
 
         if not created:
+
             obj.delete()
+
+            update_book_like_count(book_id)
+
             return Response({"msg": "unliked"})
+
+        update_book_like_count(book_id)
 
         return Response({"msg": "liked"})
 
 #收藏和取消收藏
 class ToggleFavoriteView(APIView):
+
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, book_id):
+
         obj, created = Favorite.objects.get_or_create(
             user=request.user,
             book_id=book_id
         )
 
         if not created:
+
             obj.delete()
+
+            update_book_favorite_count(book_id)
+
             return Response({"msg": "unfavorited"})
+
+        update_book_favorite_count(book_id)
 
         return Response({"msg": "favorited"})
 
 #评分
 class RateBookView(APIView):
+
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, book_id):
-        score = int(request.data.get('score'))
+
+        score = int(request.data.get('score', 0))
+
+        if score < 1 or score > 5:
+            return Response(
+                {"error": "score must be 1-5"},
+                status=400
+            )
 
         Rating.objects.update_or_create(
             user=request.user,
@@ -51,9 +78,17 @@ class RateBookView(APIView):
             defaults={'score': score}
         )
 
-        avg = Rating.objects.filter(book_id=book_id).aggregate(avg=Avg('score'))
+        update_book_rating(book_id)
 
-        return Response({"avg_score": avg['avg']})
+        avg = Rating.objects.filter(
+            book_id=book_id
+        ).aggregate(
+            avg=Avg('score')
+        )
+
+        return Response({
+            "avg_score": avg['avg']
+        })
 
 #评论
 class CommentView(APIView):

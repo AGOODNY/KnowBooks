@@ -38,4 +38,14 @@ urlpatterns = [
         '',
         include(router.urls)
     ),
+
+    path(
+        'tags/cloud/',
+        TagCloudView.as_view()
+    ),
+
+    path(
+        'tags/<int:tag_id>/books/',
+        TagBooksView.as_view()
+    ),
 ]

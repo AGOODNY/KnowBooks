@@ -16,11 +16,17 @@ class BookSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
-    tag_ids = serializers.PrimaryKeyRelatedField(
+    existing_tag_ids = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(),
         many=True,
-        write_only=True,
-        required=False
+        required=False,
+        write_only=True
+    )
+
+    new_tag_names = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        write_only=True
     )
 
     class Meta:
@@ -29,8 +35,13 @@ class BookSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
 
-        tags = validated_data.pop(
-            'tag_ids',
+        existing_tags = validated_data.pop(
+            "existing_tag_ids",
+            []
+        )
+
+        new_tag_names = validated_data.pop(
+            "new_tag_names",
             []
         )
 
@@ -38,15 +49,28 @@ class BookSerializer(serializers.ModelSerializer):
             **validated_data
         )
 
-        book.tags.set(tags)
+        book.tags.set(existing_tags)
+
+        for tag_name in new_tag_names:
+
+            tag, _ = Tag.objects.get_or_create(
+                name=tag_name
+            )
+
+            book.tags.add(tag)
 
         return book
 
     def update(self, instance, validated_data):
 
-        tags = validated_data.pop(
-            'tag_ids',
+        existing_tags = validated_data.pop(
+            "existing_tag_ids",
             None
+        )
+
+        new_tag_names = validated_data.pop(
+            "new_tag_names",
+            []
         )
 
         for attr, value in validated_data.items():
@@ -54,7 +78,16 @@ class BookSerializer(serializers.ModelSerializer):
 
         instance.save()
 
-        if tags is not None:
-            instance.tags.set(tags)
+        if existing_tags is not None:
+
+            instance.tags.set(existing_tags)
+
+            for tag_name in new_tag_names:
+
+                tag, _ = Tag.objects.get_or_create(
+                    name=tag_name
+                )
+
+                instance.tags.add(tag)
 
         return instance
