@@ -45,74 +45,100 @@ class HomeView(APIView):
 
 #协同过滤
     def recommend_books(self, user):
+        try:
+            liked_books = Like.objects.filter(
+                user=user
+            ).values_list(
+                'book_id',
+                flat=True
+            )
 
-        liked_books = Like.objects.filter(
-            user=user
-        ).values_list(
-            'book_id',
-            flat=True
-        )
+            fav_books = Favorite.objects.filter(
+                user=user
+            ).values_list(
+                'book_id',
+                flat=True
+            )
 
-        fav_books = Favorite.objects.filter(
-            user=user
-        ).values_list(
-            'book_id',
-            flat=True
-        )
+            user_books = set(
+                list(liked_books)
+                +
+                list(fav_books)
+            )
 
-        user_books = set(
-            list(liked_books)
-            +
-            list(fav_books)
-        )
+            if not user_books:
+                return Book.objects.filter(
+                    status="approved"
+                ).order_by(
+                    '-likes_count'
+                )[:10]
 
-        if not user_books:
-            return Book.objects.filter(
+            similar_users = Like.objects.filter(
+                book_id__in=user_books
+            ).exclude(
+                user=user
+            ).values_list(
+                'user_id',
+                flat=True
+            ).distinct()
+
+            collaborative_ids = Like.objects.filter(
+                user_id__in=similar_users
+            ).exclude(
+                book_id__in=user_books
+            ).values_list(
+                'book_id',
+                flat=True
+            ).distinct()
+
+            preferred_tags = list(
+                Tag.objects.filter(
+                    books__id__in=user_books
+                ).annotate(
+                    freq=Count('id')
+                ).order_by(
+                    '-freq'
+                )[:5]
+            )
+
+            if preferred_tags:
+                tag_books = Book.objects.filter(
+                    tags__in=preferred_tags,
+                    status="approved"
+                ).exclude(
+                    id__in=user_books
+                ).distinct()
+            else:
+                tag_books = Book.objects.none()
+
+            # 获取推荐结果
+            collaborative_books = Book.objects.filter(
+                id__in=collaborative_ids,
                 status="approved"
-            ).order_by(
-                '-likes_count'
-            )[:10]
+            ) if collaborative_ids else Book.objects.none()
 
-        similar_users = Like.objects.filter(
-            book_id__in=user_books
-        ).exclude(
-            user=user
-        ).values_list(
-            'user_id',
-            flat=True
-        )
+            # 合并两个查询集
+            final_books = list(collaborative_books) + list(tag_books)
 
-        collaborative_ids = Like.objects.filter(
-            user_id__in=similar_users
-        ).exclude(
-            book_id__in=user_books
-        ).values_list(
-            'book_id',
-            flat=True
-        )
+            # 去重并限制数量
+            seen_ids = set()
+            unique_books = []
+            for book in final_books:
+                if book.id not in seen_ids:
+                    seen_ids.add(book.id)
+                    unique_books.append(book)
+                    if len(unique_books) >= 10:
+                        break
 
-        preferred_tags = Tag.objects.filter(
-            books__id__in=user_books
-        ).annotate(
-            freq=Count('id')
-        ).order_by(
-            '-freq'
-        )[:5]
+            if unique_books:
+                return unique_books
 
-        tag_books = Book.objects.filter(
-            tags__in=preferred_tags,
-            status="approved"
-        ).exclude(
-            id__in=user_books
-        )
+            # 如果没有推荐结果，返回热门书籍
+            return Book.objects.filter(status="approved").order_by('-likes_count')[:10]
 
-        final_books = Book.objects.filter(
-            Q(id__in=collaborative_ids)
-            |
-            Q(id__in=tag_books)
-        ).distinct()[:10]
-
-        return final_books
+        except Exception as e:
+            print(f"推荐生成错误: {e}")
+            return Book.objects.filter(status="approved").order_by('-likes_count')[:10]
 
 #搜索
 class SearchView(APIView):

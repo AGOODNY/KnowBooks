@@ -1,3 +1,4 @@
+# apps/interactions/serializers.py
 from rest_framework import serializers
 from .models import *
 
@@ -8,5 +9,11 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = '__all__'
-        read_only_fields = ['user', 'likes_count']
+        fields = ['id', 'user', 'book', 'content', 'rating', 'created_at', 'likes_count', 'username', 'avatar']
+        read_only_fields = ['id', 'user', 'book', 'created_at', 'likes_count', 'username', 'avatar']
+        extra_kwargs = {
+            'rating': {'required': False, 'allow_null': True}
+        }
+
+    def create(self, validated_data):
+        return Comment.objects.create(**validated_data)

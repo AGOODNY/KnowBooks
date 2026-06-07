@@ -104,21 +104,34 @@ class RateBookView(APIView):
         })
 
 #评论
+# apps/interactions/views.py 中的 CommentView
 class CommentView(APIView):
-
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, book_id):
+        print(f"Received comment request - book_id: {book_id}")
+        print(f"Request data: {request.data}")
 
-        serializer = CommentSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        # 确保请求数据中只包含需要的字段
+        serializer = CommentSerializer(data={
+            'content': request.data.get('content', '')
+        })
 
-        serializer.save(user=request.user, book_id=book_id)
+        if not serializer.is_valid():
+            print(f"Serializer errors: {serializer.errors}")
+            return Response(serializer.errors, status=400)
+
+        # 保存评论
+        comment = serializer.save(
+            user=request.user,
+            book_id=book_id
+        )
 
         # 用户评论统计同步
         update_user_comment_count(request.user.id)
 
-        return Response(serializer.data)
+        # 返回序列化后的数据
+        return Response(CommentSerializer(comment).data, status=201)
 
 #获取评论列表
 class CommentListView(APIView):
