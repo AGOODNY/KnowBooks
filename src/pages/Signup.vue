@@ -3,17 +3,17 @@
 
     <div class="auth-card">
 
-      <!-- 标题 -->
       <h1>Create Account</h1>
+
       <p class="subtitle">
-        Join the KnowBooks community.
+        Sign up to start your reading journey.
       </p>
 
-      <!-- 注册表单 -->
       <form @submit.prevent="handleSignup">
 
         <div class="form-group">
           <label>Username</label>
+
           <input
             v-model="username"
             type="text"
@@ -24,6 +24,7 @@
 
         <div class="form-group">
           <label>Email</label>
+
           <input
             v-model="email"
             type="email"
@@ -34,6 +35,7 @@
 
         <div class="form-group">
           <label>Password</label>
+
           <input
             v-model="password"
             type="password"
@@ -46,15 +48,17 @@
           class="btn-primary"
           type="submit"
         >
-          Sign up
+          Sign Up
         </button>
 
       </form>
 
-      <!-- 跳转登录 -->
       <p class="bottom-text">
         Already have an account?
-        <span @click="router.push('/login')">Log in</span>
+
+        <span @click="router.push('/login')">
+          Log in
+        </span>
       </p>
 
     </div>
@@ -63,9 +67,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import {users, saveUsers } from '../stores/userStore'
+import axios from 'axios'
 
 const router = useRouter()
 
@@ -73,29 +77,34 @@ const username = ref('')
 const email = ref('')
 const password = ref('')
 
-const handleSignup = () => {
-  const exists = users.value.find(
-    u => u.email === email.value
-  )
+const handleSignup = async () => {
 
-  if (exists) {
-    alert('Email already exists')
-    return
+  try {
+
+    await axios.post(
+      'http://127.0.0.1:8000/api/users/register/',
+      {
+        username: username.value,
+        email: email.value,
+        password: password.value
+      }
+    )
+
+    alert('Register Success')
+
+    router.push('/login')
+
+  }
+  catch(err) {
+
+    alert(
+      err.response?.data?.error ||
+      err.response?.data?.detail ||
+      'Register Failed'
+    )
+
   }
 
-  users.value.push({
-    id: Date.now(),
-    username: username.value,
-    email: email.value,
-    password: password.value,
-    role: 'user'
-  })
-
-  saveUsers()
-
-  alert('Account created successfully!')
-
-  router.push('/login')
 }
 </script>
 
