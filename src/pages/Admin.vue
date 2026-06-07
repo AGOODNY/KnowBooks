@@ -12,14 +12,14 @@
         class="admin-card"
       >
         <img
-          :src="book.cover"
+          :src="getCoverUrl(book.cover)"
           class="admin-cover"
           alt="cover"
         />
         <div>
           <h3>{{ book.title }}</h3>
           <p>{{ book.author }}</p>
-          <p class="uploader-info">Uploaded by: {{ book.uploaded_by?.username || 'Unknown' }}</p>
+          <p class="uploader-info">Uploaded by: {{ book.uploaded_by?.username || book.uploaded_by?.email || 'Unknown' }}</p>
         </div>
         <div class="actions">
           <button
@@ -48,6 +48,18 @@ import axios from 'axios'
 
 const pendingBooks = ref([])
 const loading = ref(false)
+
+// 获取封面图片完整 URL
+const getCoverUrl = (cover) => {
+  if (!cover) return ''
+  if (cover.startsWith('http://') || cover.startsWith('https://')) {
+    return cover
+  }
+  if (cover.startsWith('/media/')) {
+    return `http://127.0.0.1:8000${cover}`
+  }
+  return `http://127.0.0.1:8000/media/${cover}`
+}
 
 // 获取待审批的书籍列表
 const loadPendingBooks = async () => {
@@ -101,7 +113,6 @@ const approveBook = async (book) => {
         }
       }
     )
-    // 从列表中移除已批准的书籍
     pendingBooks.value = pendingBooks.value.filter(b => b.id !== book.id)
     alert(`"${book.title}" has been approved`)
   } catch (err) {
@@ -128,7 +139,6 @@ const rejectBook = async (book) => {
         }
       }
     )
-    // 从列表中移除已拒绝的书籍
     pendingBooks.value = pendingBooks.value.filter(b => b.id !== book.id)
     alert(`"${book.title}" has been rejected`)
   } catch (err) {
@@ -151,12 +161,9 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-
   padding: 1.5rem;
-
   border: 1px solid #eee;
   border-radius: 12px;
-
   margin-bottom: 1rem;
 }
 
@@ -175,16 +182,33 @@ onMounted(() => {
 .btn-approve {
   background: #d9704a;
   color: white;
-  padding: 5px;
-  border: 3px solid #eee;
-  border-radius: 10px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 .btn-reject {
-  background: #8c8982 ;
+  background: #8c8982;
   color: white;
-  padding: 5px;
-  border: 3px solid #eee;
-  border-radius: 10px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-approve:hover, .btn-reject:hover {
+  opacity: 0.9;
+}
+
+.btn-approve:disabled, .btn-reject:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.uploader-info {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 4px;
 }
 </style>
