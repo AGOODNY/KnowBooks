@@ -1,156 +1,89 @@
 <template>
   <div class="upload-page">
     <div class="container">
-
       <div class="upload-card">
-
         <h1 class="page-title">
           Upload a Book
         </h1>
-
         <p class="page-subtitle">
           Share a book with the KnowBooks community.
         </p>
-
         <form @submit.prevent="handleSubmit">
-
           <!-- Cover Upload -->
-
           <div class="form-group">
-
             <label>
               Book Cover
             </label>
-
             <div 
               class="upload-area"
               @click="triggerFileInput"
             >
-
               <template v-if="!previewImage">
-
                 <div class="upload-icon">
                   +
                 </div>
-
                 <p>Upload Cover</p>
-
               </template>
-
               <img
                 v-else
                 :src="previewImage"
                 alt="Book Cover"
                 class="preview-image"
               >
-
             </div>
-
-          <input
-            ref="fileInput"
-            type="file"
-            accept="image/*"
-            class="hidden-input"
-            @change="handleImageUpload"
-          />
-
-          </div>
-
-          <!-- Preview -->
-
-          <div
-            v-if="previewImage"
-            class="preview"
-          >
-
-            <h3>Cover Preview</h3>
-
-            <img
-              :src="previewImage"
-              alt="Book Cover"
+            <input
+              ref="fileInput"
+              type="file"
+              accept="image/*"
+              class="hidden-input"
+              @change="handleImageUpload"
             />
-
           </div>
 
           <!-- Title -->
-
           <div class="form-group">
-
             <label>
               Title
             </label>
-
             <input
               v-model="book.title"
               type="text"
               placeholder="Book title"
               required
             />
-
           </div>
 
           <!-- Author -->
-
           <div class="form-group">
-
             <label>
               Author
             </label>
-
             <input
               v-model="book.author"
               type="text"
               placeholder="Author name"
               required
             />
-
           </div>
 
-          <!-- Category -->
-
+          <!-- Category / Tags -->
           <div class="form-group">
-
             <label>
-              Category
+              Tags (comma separated)
             </label>
-
-            <select v-model="book.category">
-
-              <option>Fiction</option>
-              <option>Fantasy</option>
-              <option>Science Fiction</option>
-              <option>Romance</option>
-              <option>Biography</option>
-              <option>History</option>
-
-            </select>
-
-          </div>
-
-          <!-- Year -->
-
-          <div class="form-group">
-
-            <label>
-              Publish Year
-            </label>
-
             <input
-              v-model="book.year"
-              type="number"
-              placeholder="2024"
+              v-model="tagsInput"
+              type="text"
+              placeholder="e.g., Fiction, Fantasy, Romance"
             />
-
+            <small>Separate multiple tags with commas</small>
           </div>
 
           <!-- Description -->
-
           <div class="form-group">
-
             <label>
               Description
             </label>
-
             <textarea
               v-model="book.description"
               placeholder="Write a short description..."
@@ -160,14 +93,12 @@
           <button
             type="submit"
             class="btn-submit"
+            :disabled="submitting"
           >
-            Upload Book
+            {{ submitting ? 'Uploading...' : 'Upload Book' }}
           </button>
-
         </form>
-
       </div>
-
     </div>
   </div>
 </template>
@@ -175,18 +106,18 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { uploads } from '../stores/uploadsStore'
+import axios from 'axios'
 
 const router = useRouter()
 
 const selectedFile = ref(null)
 const previewImage = ref('')
+const submitting = ref(false)
+const tagsInput = ref('')
 
 const book = ref({
   title: '',
   author: '',
-  category: 'Fiction',
-  year: '',
   description: ''
 })
 
@@ -197,61 +128,93 @@ function triggerFileInput() {
 }
 
 function handleImageUpload(event) {
-
   const file = event.target.files[0]
-
   if (!file) return
-
   selectedFile.value = file
-
   previewImage.value = URL.createObjectURL(file)
 }
 
-function handleSubmit() {
+async function handleSubmit() {
+  const token = localStorage.getItem('access_token')
+  if (!token) {
+    alert('Please log in first')
+    router.push('/login')
+    return
+  }
 
-  const formData = new FormData()
-  formData.append('cover', selectedFile.value)
-  formData.append('title', book.value.title)
-  formData.append('author', book.value.author)
-  formData.append('category', book.value.category)
-  formData.append('year', book.value.year)
-  formData.append('description', book.value.description)
+  if (!book.value.title.trim()) {
+    alert('Please enter a title')
+    return
+  }
 
-  uploads.value.push({
-    id: Date.now(), 
-    title: book.value.title,
-    author: book.value.author,
-    category: book.value.category,
-    year: book.value.year,
-    description: book.value.description,
-    cover: selectedFile.value,
-    status: 'Pending'
-  })
+  if (!book.value.author.trim()) {
+    alert('Please enter an author')
+    return
+  }
 
-  alert('The uploading request is sent successfully!')
+  submitting.value = true
 
-  resetForm()
+  try {
+    const formData = new FormData()
+    
+    // 添加文本字段
+    formData.append('title', book.value.title)
+    formData.append('author', book.value.author)
+    formData.append('description', book.value.description || '')
+    
+    // 添加封面图片
+    if (selectedFile.value) {
+      formData.append('cover', selectedFile.value)
+    }
+    
+    // 添加标签
+    if (tagsInput.value.trim()) {
+      const tags = tagsInput.value.split(',').map(t => t.trim()).filter(t => t)
+      tags.forEach(tag => {
+        formData.append('tags', tag)
+      })
+    }
 
-  router.push('/profile')
+    const res = await axios.post(
+      'http://127.0.0.1:8000/api/recommendations/books/',
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    )
+
+    alert('Book uploaded successfully! It will be reviewed by an admin.')
+    resetForm()
+    router.push('/profile')
+
+  } catch (err) {
+    console.error(err)
+    const errorMsg = err.response?.data?.error || err.response?.data?.detail || 'Upload failed. Please try again.'
+    alert(errorMsg)
+  } finally {
+    submitting.value = false
+  }
 }
 
 function resetForm() {
-
   book.value = {
     title: '',
     author: '',
-    category: 'Fiction',
-    year: '',
     description: ''
   }
-
+  tagsInput.value = ''
   selectedFile.value = null
   previewImage.value = ''
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
 }
 </script>
 
 <style scoped>
-
 .upload-page {
   padding: 4rem 0;
 }

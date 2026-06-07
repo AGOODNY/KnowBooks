@@ -1,74 +1,142 @@
 <template>
-
-<div class="admin-page">
-
-  <div class="container">
-
-    <h1>Book Approval Dashboard</h1>
-
-    <div
-      v-for="book in pendingBooks"
-      :key="book.id"
-      class="admin-card"
-    >
-      <img
-        :src="book.cover"
-        class="admin-cover"
-        alt="cover"
-      />
-
-      <div>
-
-        <h3>{{ book.title }}</h3>
-
-        <p>{{ book.author }}</p>
-
+  <div class="admin-page">
+    <div class="container">
+      <h1>Book Approval Dashboard</h1>
+      <div v-if="loading" class="loading">Loading...</div>
+      <div v-else-if="pendingBooks.length === 0" class="empty-state">
+        <p>No pending books for approval.</p>
       </div>
-
-      <div class="actions">
-
-        <button
-          class="btn-approve"
-          @click="approveBook(book)"
-        >
-          Approve
-        </button>
-
-        <button
-          class="btn-reject"
-          @click="rejectBook(book)"
-        >
-          Reject
-        </button>
-
+      <div
+        v-for="book in pendingBooks"
+        :key="book.id"
+        class="admin-card"
+      >
+        <img
+          :src="book.cover"
+          class="admin-cover"
+          alt="cover"
+        />
+        <div>
+          <h3>{{ book.title }}</h3>
+          <p>{{ book.author }}</p>
+          <p class="uploader-info">Uploaded by: {{ book.uploaded_by?.username || 'Unknown' }}</p>
+        </div>
+        <div class="actions">
+          <button
+            class="btn-approve"
+            @click="approveBook(book)"
+            :disabled="loading"
+          >
+            Approve
+          </button>
+          <button
+            class="btn-reject"
+            @click="rejectBook(book)"
+            :disabled="loading"
+          >
+            Reject
+          </button>
+        </div>
       </div>
-
     </div>
-
   </div>
-
-</div>
-
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { uploads } from '../stores/uploadsStore'
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
 
+const pendingBooks = ref([])
+const loading = ref(false)
 
-const pendingBooks = computed(() =>
-  uploads.value.filter(
-    book => book.status === 'Pending'
-  )
-)
+// 获取待审批的书籍列表
+const loadPendingBooks = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) {
+    alert('Please log in as admin')
+    return
+  }
 
-const approveBook = (book) => {
-  book.status = 'Uploaded'
+  loading.value = true
+  try {
+    const res = await axios.get(
+      'http://127.0.0.1:8000/api/recommendations/books/pending/',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+    pendingBooks.value = res.data
+  } catch (err) {
+    console.error(err)
+    if (err.response?.status === 403) {
+      alert('You do not have admin permission')
+    } else {
+      alert('Failed to load pending books')
+    }
+  } finally {
+    loading.value = false
+  }
 }
 
-const rejectBook = (book) => {
-  book.status = 'Rejected'
+// 批准书籍
+const approveBook = async (book) => {
+  const token = localStorage.getItem('access_token')
+  if (!token) {
+    alert('Please log in as admin')
+    return
+  }
+
+  try {
+    await axios.post(
+      `http://127.0.0.1:8000/api/recommendations/books/${book.id}/approve/`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+    // 从列表中移除已批准的书籍
+    pendingBooks.value = pendingBooks.value.filter(b => b.id !== book.id)
+    alert(`"${book.title}" has been approved`)
+  } catch (err) {
+    console.error(err)
+    alert('Failed to approve book')
+  }
 }
+
+// 拒绝书籍
+const rejectBook = async (book) => {
+  const token = localStorage.getItem('access_token')
+  if (!token) {
+    alert('Please log in as admin')
+    return
+  }
+
+  try {
+    await axios.post(
+      `http://127.0.0.1:8000/api/recommendations/books/${book.id}/reject/`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+    // 从列表中移除已拒绝的书籍
+    pendingBooks.value = pendingBooks.value.filter(b => b.id !== book.id)
+    alert(`"${book.title}" has been rejected`)
+  } catch (err) {
+    console.error(err)
+    alert('Failed to reject book')
+  }
+}
+
+onMounted(() => {
+  loadPendingBooks()
+})
 </script>
 
 <style scoped>
