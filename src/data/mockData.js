@@ -18,7 +18,7 @@ const generateTags = () => {
   return tags
 }
 
-const generateBooks = (count = 20) => {
+  const generateBooks = (count = 20) => {
   const books = []
   const tagPool = generateTags()
 
@@ -50,11 +50,18 @@ const generateBooks = (count = 20) => {
       rating: (1 + Math.random() * 4).toFixed(1),
       ratingCount: Math.floor(Math.random() * 100),
       dateAdded: date.toISOString().split('T')[0],
-      status: i % 5 === 0 ? 'pending' : 'approved',
+      status:
+        i % 3 === 0
+          ? 'pending'
+          : i % 3 === 1
+          ? 'approved'
+          : 'rejected',
     })
   }
   return books
-}
+} 
+
+
 
 const generateUserStats = () => ({
   booksRead: 12,

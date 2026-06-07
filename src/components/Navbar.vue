@@ -10,29 +10,37 @@
         >
           &larr;
         </button>
-        <router-link :to="isLanding ? '/' : '/home'" class="navbar-brand">
+        <router-link
+          :to="isAuthenticated ? '/home' : '/'"
+          class="navbar-brand"
+        >
           KnowBooks
-        </router-link>
+      </router-link>
       </div>
 
-      <div v-if="!isLanding" class="navbar-center">
+      <div
+        v-if="!isLanding && !hideNavbarFeatures"
+        class="navbar-center"
+      >
         <SearchBar />
       </div>
 
       <div class="navbar-right">
         <template v-if="isLanding">
-          <button class="btn-text" @click="router.push('/home')">Log in</button>
-          <button class="btn-primary btn-sm" @click="router.push('/home')">Sign up</button>
+          <button class="btn-text" @click="router.push('/login')">Log in</button>
+          <button class="btn-primary btn-sm" @click="router.push('/signup')">Sign up</button>
         </template>
-        <div v-else class="navbar-user">
+       <div
+          v-else-if="!hideNavbarFeatures"
+          class="navbar-user"> 
+          
           <div class="user-avatar">U</div>
           <span class="user-name">User</span>
           <div class="user-dropdown">
             <router-link to="/profile">Profile</router-link>
-            <router-link to="/upload">My Uploads</router-link>
-            <router-link to="/admin">Admin</router-link>
+            <router-link v-if="isAdmin" to="/admin">Admin</router-link>
             <hr />
-            <button class="btn-logout">Log out</button>
+            <button class="btn-logout" @click="handleLogout" >Log out</button>
           </div>
         </div>
       </div>
@@ -44,10 +52,23 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SearchBar from './SearchBar.vue'
+import { useAuth } from '../composables/useAuth'
+
+const { isAdmin } = useAuth()
 
 const route = useRoute()
 const router = useRouter()
 const isLanding = computed(() => route.path === '/')
+const { isAuthenticated, logout } = useAuth()
+const handleLogout = () => {
+  logout()
+  router.push('/')
+}
+
+const hideNavbarFeatures = computed(() =>
+  route.path === '/login' ||
+  route.path === '/signup'
+)
 </script>
 
 <style scoped>
