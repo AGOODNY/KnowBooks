@@ -32,13 +32,24 @@ class UserSerializer(serializers.ModelSerializer):
 # 我的评论
 class MyCommentSerializer(serializers.ModelSerializer):
     book_title = serializers.CharField(source='book.title', read_only=True)
-    book_cover = serializers.CharField(source='book.cover', read_only=True)
+    book_cover = serializers.SerializerMethodField()
     username = serializers.CharField(source='user.username', read_only=True)
 
     class Meta:
         model = Comment
         fields = ['id', 'book_id', 'book_title', 'book_cover', 'content',
                   'rating', 'created_at', 'likes_count', 'username']
+
+    def get_book_cover(self, obj):
+        if obj.book and obj.book.cover:
+            if isinstance(obj.book.cover, str):
+                return obj.book.cover
+            try:
+                if hasattr(obj.book.cover, 'url'):
+                    return obj.book.cover.url
+            except:
+                pass
+        return None
 
 # 修改信息
 class UpdateUserSerializer(serializers.ModelSerializer):

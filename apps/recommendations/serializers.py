@@ -1,12 +1,20 @@
 from rest_framework import serializers
 from .models import Book, Tag
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class TagSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Tag
         fields = "__all__"
+
+
+class UserBasicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email']
 
 
 class BookSerializer(serializers.ModelSerializer):
@@ -22,6 +30,8 @@ class BookSerializer(serializers.ModelSerializer):
         required=False,
         write_only=True
     )
+
+    uploaded_by = UserBasicSerializer(read_only=True)
 
     class Meta:
         model = Book

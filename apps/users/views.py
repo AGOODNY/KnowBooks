@@ -7,8 +7,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import *
 
 from apps.interactions.models import (
-    Favorite, Like, Comment, BrowsingHistory
+    Favorite, Like, Comment, BrowsingHistory, Rating
 )
+from ..recommendations.serializers import BookSerializer
 
 User = get_user_model()
 
@@ -108,9 +109,10 @@ class MyFavoritesView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        data = Favorite.objects.filter(user=request.user)
-        return Response([f.book.id for f in data])
-
+        favorites = Favorite.objects.filter(user=request.user).select_related('book')
+        books = [fav.book for fav in favorites]
+        serializer = BookSerializer(books, many=True, context={'request': request})
+        return Response(serializer.data)
 #我的点赞
 class MyLikesView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -124,9 +126,39 @@ class MyCommentsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        data = Comment.objects.filter(user=request.user).select_related('book', 'user')
-        serializer = MyCommentSerializer(data, many=True)
-        return Response(serializer.data)
+        comments = Comment.objects.filter(user=request.user).select_related('book', 'user')
+
+        result = []
+        for comment in comments:
+            cover_url = None
+            if comment.book and comment.book.cover:
+                if isinstance(comment.book.cover, str):
+                    cover_url = comment.book.cover
+                elif hasattr(comment.book.cover, 'url'):
+                    cover_url = comment.book.cover.url
+
+            # 获取评分
+            rating = comment.rating
+            if rating is None:
+                try:
+                    rating_obj = Rating.objects.get(user=request.user, book=comment.book)
+                    rating = rating_obj.score
+                except Rating.DoesNotExist:
+                    rating = 0
+
+            result.append({
+                "id": comment.id,
+                "book_id": comment.book.id,
+                "book_title": comment.book.title,
+                "book_cover": cover_url,
+                "content": comment.content,
+                "rating": rating,
+                "created_at": comment.created_at,
+                "likes_count": comment.likes_count,
+                "username": comment.user.username,
+            })
+
+        return Response(result)
 
 # 浏览历史
 class MyHistoryView(APIView):
@@ -136,15 +168,19 @@ class MyHistoryView(APIView):
         data = BrowsingHistory.objects.filter(user=request.user)
         return Response([h.book.id for h in data])
 
-#统计信息
 class UserStatsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         user = request.user
+        # 获取用户的评论数量
+        comments_count = Comment.objects.filter(user=user).count()
+        # 获取浏览历史数量
+        books_read_count = BrowsingHistory.objects.filter(user=user).values('book').distinct().count()
 
         return Response({
             "favorites": user.favorites_count,
             "likes": user.likes_count,
-            "books_read": user.books_read_count,
+            "books_read": books_read_count,
+            "comments": comments_count,
         })
