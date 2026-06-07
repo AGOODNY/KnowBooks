@@ -1,7 +1,13 @@
 <template>
   <router-link v-if="size === 'compact'" :to="`/book/${book.id}`" class="book-card book-card--compact">
     <div class="book-card-cover book-card-cover--compact">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" class="cover-icon">
+      <img 
+        v-if="book.cover" 
+        :src="getCoverUrl(book.cover)" 
+        :alt="book.title"
+        class="cover-image cover-image--compact"
+      />
+      <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" class="cover-icon">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
       </svg>
@@ -10,24 +16,32 @@
       <h3 class="book-card-title">{{ book.title }}</h3>
       <p class="book-card-author">{{ book.author }}</p>
       <div class="book-card-meta">
-        <span class="book-card-rating book-card-rating--compact" :title="`${book.rating}/5`"><span class="rating-star">&#9733;</span> {{ book.rating }}</span>
+        <span class="book-card-rating book-card-rating--compact" :title="`${book.average_rating || book.rating}/5`">
+          <span class="rating-star">&#9733;</span> {{ (book.average_rating || book.rating || 0).toFixed(1) }}
+        </span>
       </div>
     </div>
   </router-link>
 
   <router-link v-else :to="`/book/${book.id}`" :class="['book-card', `book-card--${size}`]">
     <div class="book-card-cover">
-      <span class="cover-placeholder">Not uploaded</span>
+      <img 
+        v-if="book.cover" 
+        :src="getCoverUrl(book.cover)" 
+        :alt="book.title"
+        class="cover-image"
+      />
+      <span v-else class="cover-placeholder">No Cover</span>
     </div>
     <div class="book-card-info">
       <h3 class="book-card-title">{{ book.title }}</h3>
       <p class="book-card-author">{{ book.author }}</p>
       <div class="book-card-meta">
-        <span class="book-card-rating" :title="`${book.rating}/5`">
+        <span class="book-card-rating" :title="`${book.average_rating || book.rating}/5`">
           {{ starDisplay }}
         </span>
         <span class="book-card-likes">
-          {{ book.likes }} likes
+          {{ book.likes_count || book.likes || 0 }} likes
         </span>
       </div>
       <div v-if="book.tags && book.tags.length > 0" class="book-card-tags">
@@ -41,13 +55,37 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  book: Object,
-  size: { type: String, default: 'default' },
+  book: {
+    type: Object,
+    required: true
+  },
+  size: { 
+    type: String, 
+    default: 'default',
+    validator: (value) => ['default', 'small', 'compact'].includes(value)
+  },
 })
 
-const starDisplay = computed(() =>
-  '★'.repeat(Math.round(props.book.rating)) + '☆'.repeat(5 - Math.round(props.book.rating))
-)
+// 获取封面图片 URL
+const getCoverUrl = (cover) => {
+  if (!cover) return ''
+  // 如果已经是完整的 URL，直接返回
+  if (cover.startsWith('http://') || cover.startsWith('https://')) {
+    return cover
+  }
+  // 如果是相对路径，添加 media 前缀
+  if (cover.startsWith('/media/')) {
+    return `http://127.0.0.1:8000${cover}`
+  }
+  // 其他情况，假设是媒体文件路径
+  return `http://127.0.0.1:8000/media/${cover}`
+}
+
+const starDisplay = computed(() => {
+  const rating = props.book.average_rating || props.book.rating || 0
+  const fullStars = Math.round(rating)
+  return '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars)
+})
 </script>
 
 <style scoped>
@@ -59,6 +97,7 @@ const starDisplay = computed(() =>
   overflow: hidden;
   background: #fff;
   transition: border-color 0.2s, box-shadow 0.2s;
+  text-decoration: none;
 }
 
 .book-card:hover {
@@ -73,6 +112,19 @@ const starDisplay = computed(() =>
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+.cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-image--compact {
+  width: 52px;
+  height: auto;
+  object-fit: cover;
 }
 
 .cover-placeholder {
@@ -175,6 +227,7 @@ const starDisplay = computed(() =>
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .cover-icon {

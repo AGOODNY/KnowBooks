@@ -180,40 +180,71 @@ const submitReview = async () => {
     return
   }
   if (!newReview.value.trim()) {
+    alert('Please enter a review')
     return
   }
+  
   try {
     const token = localStorage.getItem('access_token')
-    await axios.post(
+    const commentData = {
+      content: newReview.value
+    }
+    
+    console.log('Submitting review:', commentData)
+    
+    const commentResponse = await axios.post(
       `http://127.0.0.1:8000/api/interactions/comment/${bookId}/`,
-      {
-        content: newReview.value
-      },
+      commentData,
       {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       }
     )
+    
+    console.log('Review submitted successfully:', commentResponse.data)
+    
+    // If there's a rating, submit it separately
     if (selectedRating.value > 0) {
-      await axios.post(
-        `http://127.0.0.1:8000/api/interactions/rate/${bookId}/`,
-        {
-          score: selectedRating.value
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
+      try {
+        await axios.post(
+          `http://127.0.0.1:8000/api/interactions/rate/${bookId}/`,
+          {
+            score: selectedRating.value
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
           }
-        }
-      )
+        )
+        console.log('Rating submitted successfully')
+      } catch (rateErr) {
+        console.error('Rating submission failed:', rateErr)
+        // Rating failure doesn't affect the comment, continue execution
+      }
     }
+    
     newReview.value = ''
     selectedRating.value = 0
+    
+    // Reload comments and book information
     await loadComments()
     await loadBook()
+    
+    alert('Review submitted successfully!')
+    
   } catch (err) {
-    console.error(err)
+    console.error('Failed to submit review:', err)
+    console.error('Error response:', err.response?.data)
+    
+    const errorMsg = err.response?.data?.content?.[0] || 
+                    err.response?.data?.detail || 
+                    err.response?.data?.error ||
+                    'Failed to submit review'
+    alert(errorMsg)
   }
 }
 
