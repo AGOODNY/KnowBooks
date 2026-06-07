@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import EmailVerificationCode
+
+from apps.interactions.models import Comment
 
 User = get_user_model()
 
@@ -8,30 +9,12 @@ User = get_user_model()
 # 注册
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
-    code = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
-        fields = ['email', 'username', 'password', 'code']
-
-    def validate(self, data):
-        email = data['email']
-        code = data['code']
-
-        record = EmailVerificationCode.objects.filter(
-            email=email, code=code, is_used=False
-        ).order_by('-created_at').first()
-
-        if not record:
-            raise serializers.ValidationError("Invalid verification code")
-
-        record.is_used = True
-        record.save()
-
-        return data
+        fields = ['email', 'username', 'password']
 
     def create(self, validated_data):
-        validated_data.pop('code')
         user = User.objects.create_user(**validated_data)
         return user
 
@@ -43,6 +26,17 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'email', 'username', 'nickname', 'avatar',
                   'books_read_count', 'likes_count', 'favorites_count']
 
+
+# 我的评论
+class MyCommentSerializer(serializers.ModelSerializer):
+    book_title = serializers.CharField(source='book.title', read_only=True)
+    book_cover = serializers.CharField(source='book.cover', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'book_id', 'book_title', 'book_cover', 'content',
+                  'rating', 'created_at', 'likes_count', 'username']
 
 # 修改信息
 class UpdateUserSerializer(serializers.ModelSerializer):
@@ -61,3 +55,4 @@ class ChangePasswordSerializer(serializers.Serializer):
         if not user.check_password(data['old_password']):
             raise serializers.ValidationError("Old password incorrect")
         return data
+

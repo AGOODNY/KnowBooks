@@ -3,8 +3,6 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
-
-from .models import EmailVerificationCode
 from .serializers import *
 
 from apps.interactions.models import (
@@ -13,17 +11,6 @@ from apps.interactions.models import (
 
 User = get_user_model()
 
-
-# 发送验证码
-class SendCodeView(APIView):
-    def post(self, request):
-        email = request.data.get('email')
-
-        code = '123456'  # 开发阶段先写死（后面换随机+邮箱发送）
-
-        EmailVerificationCode.objects.create(email=email, code=code)
-
-        return Response({"msg": "code sent", "code": code})
 
 # 注册
 class RegisterView(APIView):
@@ -114,7 +101,6 @@ class ChangePasswordView(APIView):
 
 
 # 个人中心
-
 # 我的收藏
 class MyFavoritesView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -131,18 +117,14 @@ class MyLikesView(APIView):
         data = Like.objects.filter(user=request.user)
         return Response([l.book.id for l in data])
 
-#我的评论
+# 我的评论
 class MyCommentsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        data = Comment.objects.filter(user=request.user)
-        return Response([
-            {
-                "book_id": c.book.id,
-                "content": c.content
-            } for c in data
-        ])
+        data = Comment.objects.filter(user=request.user).select_related('book', 'user')
+        serializer = MyCommentSerializer(data, many=True)
+        return Response(serializer.data)
 
 # 浏览历史
 class MyHistoryView(APIView):

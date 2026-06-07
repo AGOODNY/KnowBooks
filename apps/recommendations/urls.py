@@ -30,11 +30,6 @@ urlpatterns = [
     ),
 
     path(
-        'book/<int:book_id>/',
-        BookDetailView.as_view()
-    ),
-
-    path(
         '',
         include(router.urls)
     ),

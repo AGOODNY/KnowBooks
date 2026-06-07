@@ -226,39 +226,6 @@ class SearchView(APIView):
         })
 
 #书籍详情
-class BookDetailView(APIView):
-    def get(self, request, book_id):
-        if (
-                request.user.is_authenticated
-                and
-                request.user.is_staff
-        ):
-            book = Book.objects.get(
-                id=book_id
-            )
-        else:
-            book = Book.objects.get(
-                id=book_id,
-                status="approved"
-            )
-
-        data = BookSerializer(book).data
-
-        # 如果登录 → 返回用户状态
-        if request.user.is_authenticated:
-            from apps.interactions.models import Like, Favorite
-
-            data['liked'] = Like.objects.filter(
-                user=request.user, book=book
-            ).exists()
-
-            data['favorited'] = Favorite.objects.filter(
-                user=request.user, book=book
-            ).exists()
-
-        return Response(data)
-
-#新增
 class BookViewSet(viewsets.ModelViewSet):
 
     queryset = Book.objects.all()
