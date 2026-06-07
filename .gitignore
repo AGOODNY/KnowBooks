@@ -1,0 +1,19 @@
+# 环境变量文件
+.env
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# Django 静态文件
+static/
+media/
+
+# 日志文件
+*.log

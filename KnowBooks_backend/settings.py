@@ -1,11 +1,11 @@
-"""
-Django settings for KnowBooks_backend project.
-"""
-
 from pathlib import Path
 from datetime import timedelta
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # ========================
 # 基础配置
@@ -87,8 +87,21 @@ WSGI_APPLICATION = 'KnowBooks_backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+
+        'NAME': 'knowbooks',
+
+        'USER': 'root',
+
+        'PASSWORD': 'ny2005',
+
+        'HOST': '127.0.0.1',
+
+        'PORT': '3306',
+
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+        }
     }
 }
 
@@ -121,7 +134,7 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ========================
-# DRF 配置（关键）
+# DRF 配置
 # ========================
 
 REST_FRAMEWORK = {
