@@ -1,200 +1,199 @@
 <template>
   <div class="profile-page">
 
-```
-<div class="container">
+    <div class="container">
 
-  <!-- Header -->
-  <section class="profile-header">
+      <!-- Header -->
+      <section class="profile-header">
 
-    <div
-      class="profile-avatar"
-      @click="triggerAvatarUpload"
-    >
-
-      <img
-        v-if="avatar"
-        :src="avatar"
-        alt="avatar"
-        class="avatar-image"
-      />
-
-      <span v-else>
-        👤
-      </span>
-
-    </div>
-
-    <input
-      ref="avatarInput"
-      type="file"
-      accept="image/*"
-      style="display: none"
-      @change="handleAvatarChange"
-    />
-
-    <div class="profile-info">
-      <h1 class="profile-name">{{ currentUser.name }}</h1>
-      <p class="profile-email">{{ currentUser.email }}</p>
-    </div>
-
-  </section>
-
-  <!-- Stats -->
-  <section class="stats-section">
-
-    <div class="stat-card">
-      <span class="stat-number">{{ favourites.length }}</span>
-      <span class="stat-label">Favorites</span>
-    </div>
-
-    <div class="stat-card">
-      <span class="stat-number">{{ uploads.length }}</span>
-      <span class="stat-label">Uploads</span>
-    </div>
-
-    <div class="stat-card">
-      <span class="stat-number">{{ comments.length }}</span>
-      <span class="stat-label">Reviews</span>
-    </div>
-
-  </section>
-
-  <!-- Favourite Books -->
-  <section class="section">
-
-    <div class="section-header">
-      <h2>Favourite Books</h2>
-    </div>
-
-    <div class="book-grid">
-
-      <div
-        class="book-card"
-        v-for="book in favourites"
-        :key="book.id"
-      >
-      <router-link
-        :to="`/book/${book.id}`"
-        class="book-link"
-      >
-
-        <h3>{{ book.title }}</h3>
-        <p>{{ book.author }}</p>
-
-      </router-link>
-        
-      </div>
-
-    </div>
-
-  </section>
-
-  <!-- My Uploads -->
-
-  <section class="section">
-
-    <div class="section-header">
-      <h2>My Uploads</h2>
-
-    <button
-      class="upload-link"
-      @click="router.push('/upload')"
-    >
-      + Upload Book
-    </button>
-
-    </div>
-
-    <div class="book-grid">
-
-      <div
-        class="book-card"
-        v-for="book in myUploads"
-        :key="book.id"
-        @click="goToDetail(book)"
-        :class="{ 'disabled-card': book.status !== 'Uploaded' }"
-      >
-        <div class="book-cover">
-          <img
-            v-if="book.cover"
-            :src="book.cover"
-            alt="book cover"
-          />
-          <div v-else class="book-placeholder">
-            No cover
-          </div>
-        </div>
-
-        <h3>{{ book.title }}</h3>
-        <p>{{ book.author }}</p>
-        <span
-          class="upload-tag"
-          :class="statusClass(book.status)"
+        <div
+          class="profile-avatar"
+          @click="triggerAvatarUpload"
         >
-          {{ book.status }}
-        </span>
-      </div>
 
-    </div>
+          <img
+            v-if="avatar"
+            :src="avatar"
+            alt="avatar"
+            class="avatar-image"
+          />
 
-  </section>
-
-  <!-- Reviews -->
-  <section class="section">
-
-    <div class="section-header">
-      <h2>My Reviews</h2>
-    </div>
-
-    <router-link
-    v-for="review in comments"
-    :key="review.id"
-    :to="`/book/${review.bookId}`"
-    class="book-link"
-    >
-      <div
-        class="review-card"
-      > 
-
-      <div class="review-top">
-          <h3>{{ review.book }}</h3>
-
-        <div class="review-rating">
-
-          <span
-            v-for="star in 5"
-            :key="star"
-          >
-            {{ star <= review.rating ? '★' : '☆' }}
+          <span v-else>
+            👤
           </span>
 
         </div>
 
-      </div>
+        <input
+          ref="avatarInput"
+          type="file"
+          accept="image/*"
+          style="display: none"
+          @change="handleAvatarChange"
+        />
 
-      <p>
-        {{ review.content }}
-      </p>
+        <div class="profile-info">
+          <h1 class="profile-name">{{ profile.nickname || profile.username }}</h1>
+          <p class="profile-email">{{ profile.email }}</p>
+        </div>
+
+      </section>
+
+      <!-- Stats -->
+      <section class="stats-section">
+
+        <div class="stat-card">
+          <span class="stat-number">{{ stats.favorites || 0 }}</span>
+          <span class="stat-label">Favorites</span>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-number">{{ stats.books_read || 0 }}</span>
+          <span class="stat-label">Books Read</span>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-number">{{ stats.likes || 0 }}</span>
+          <span class="stat-label">Likes</span>
+        </div>
+
+      </section>
+
+      <!-- Favourite Books -->
+      <section class="section">
+
+        <div class="section-header">
+          <h2>Favourite Books</h2>
+        </div>
+
+        <div class="book-grid">
+
+          <div
+            class="book-card"
+            v-for="bookId in favourites"
+            :key="bookId"
+          >
+            <router-link
+              :to="`/book/${bookId}`"
+              class="book-link"
+            >
+              <h3>Book ID: {{ bookId }}</h3>
+              <p>Click to view details</p>
+            </router-link>
+            
+          </div>
+
+          <div v-if="favourites.length === 0" class="empty-state">
+            <p>No favorite books yet.</p>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- My Uploads -->
+      <section class="section">
+
+        <div class="section-header">
+          <h2>My Uploads</h2>
+
+          <button
+            class="upload-link"
+            @click="router.push('/upload')"
+          >
+            + Upload Book
+          </button>
+
+        </div>
+
+        <div class="book-grid">
+
+          <div
+            class="book-card"
+            v-for="book in myUploads"
+            :key="book.id"
+            @click="goToDetail(book)"
+            :class="{ 'disabled-card': book.status !== 'Uploaded' }"
+          >
+            <div class="book-cover">
+              <img
+                v-if="book.cover"
+                :src="book.cover"
+                alt="book cover"
+              />
+              <div v-else class="book-placeholder">
+                No cover
+              </div>
+            </div>
+
+            <h3>{{ book.title }}</h3>
+            <p>{{ book.author }}</p>
+            <span
+              class="upload-tag"
+              :class="statusClass(book.status)"
+            >
+              {{ book.status }}
+            </span>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- Reviews -->
+      <section class="section">
+
+        <div class="section-header">
+          <h2>My Reviews</h2>
+        </div>
+
+        <div
+          v-for="review in comments"
+          :key="review.id"
+          class="review-card-wrapper"
+        >
+          <router-link
+            :to="`/book/${review.book_id}`"
+            class="book-link"
+          >
+            <div class="review-card"> 
+
+              <div class="review-top">
+                <h3>{{ review.book_title }}</h3>
+                <div class="review-rating">
+                  <span v-for="star in 5" :key="star">
+                    {{ star <= (review.rating || 0) ? '★' : '☆' }}
+                  </span>
+                </div>
+              </div>
+
+              <p>{{ review.content }}</p>
+              
+              <div class="review-footer">
+                <span class="review-date">{{ formatDate(review.created_at) }}</span>
+                <span class="review-likes">❤️ {{ review.likes_count || 0 }}</span>
+              </div>
+
+            </div>
+          </router-link>
+        </div>
+
+        <div v-if="comments.length === 0" class="empty-state">
+          <p>No reviews yet.</p>
+        </div>
+
+      </section>
 
     </div>
-    </router-link>
-
-  </section>
-
-</div>
-```
 
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter} from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from 'axios'
 
-import { favourites } from '../stores/favouriteStore'
-import { uploads } from '../stores/uploadsStore'
-import { reviews } from '../stores/reviewStore'
 import { useAuth } from '../composables/useAuth'
 
 const { currentUser } = useAuth()
@@ -205,6 +204,24 @@ const avatarInput = ref(null)
 const avatar = ref(
   localStorage.getItem('avatar')
 )
+
+// 数据
+const profile = ref({})
+const favourites = ref([])
+const comments = ref([])
+const stats = ref({})
+
+// 上传相关（如果后端有对应的接口，也需要改成后端数据）
+// 目前保留原 uploads store，因为后端没有对应的接口
+import { uploads } from '../stores/uploadsStore'
+const myUploads = uploads
+
+// 格式化日期
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString()
+}
 
 function triggerAvatarUpload() {
   avatarInput.value.click()
@@ -226,21 +243,6 @@ function handleAvatarChange(event) {
   )
 }
 
-const comments = computed(() => {
-
-  if (!currentUser.value) {
-    return []
-  }
-
-  return reviews.value.filter(
-    review =>
-      review.userId === currentUser.value.id
-  )
-
-})
-
-const myUploads = uploads 
-
 function statusClass(status) {
   switch (status) {
     case 'Uploaded':
@@ -260,12 +262,96 @@ function goToDetail(book) {
   }
 }
 
+// 获取用户资料
+const loadProfile = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
 
+  try {
+    const res = await axios.get(
+      'http://127.0.0.1:8000/api/users/me/',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+    profile.value = res.data
+  } catch (err) {
+    console.error(err)
+  }
+}
 
+// 获取收藏
+const loadFavorites = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    const res = await axios.get(
+      'http://127.0.0.1:8000/api/users/favorites/',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+    favourites.value = res.data
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+// 获取评论
+const loadComments = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    const res = await axios.get(
+      'http://127.0.0.1:8000/api/users/comments/',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+    comments.value = res.data
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+// 获取统计
+const loadStats = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    const res = await axios.get(
+      'http://127.0.0.1:8000/api/users/stats/',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+    stats.value = res.data
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+// 页面初始化
+onMounted(async () => {
+  await loadProfile()
+  await loadFavorites()
+  await loadComments()
+  await loadStats()
+})
 </script>
 
 <style scoped>
-
 .profile-page {
   padding: 4rem 0;
   background: var(--color-light);

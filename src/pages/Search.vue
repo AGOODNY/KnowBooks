@@ -9,7 +9,7 @@
           <label class="filter-label">Tags</label>
           <div class="filter-tags">
             <button
-              v-for="tag in mockTags"
+              v-for="tag in tags"
               :key="tag.id"
               :class="['filter-tag', { 'filter-tag--active': selectedTags.includes(tag.name) }]"
               @click="handleTagToggle(tag.name)"
@@ -61,7 +61,7 @@
       <section class="search-results">
         <div class="search-summary">
           <p v-if="keyword" class="search-keyword">Results for &ldquo;{{ keyword }}&rdquo;</p>
-          <p class="search-count">{{ filteredBooks.length }} books found</p>
+          <p class="search-count">{{ books.length }} books found</p>
         </div>
 
         <div v-if="loading" class="search-loading">Loading...</div>
@@ -101,11 +101,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
 import BookCard from '../components/BookCard.vue'
 import { usePagination } from '../composables/usePagination'
-import { mockBooks, mockTags } from '../data/mockData'
 
 const SORT_OPTIONS = [
   { value: 'latest', label: 'Latest' },
@@ -125,60 +125,70 @@ const router = useRouter()
 const keyword = computed(() => route.query.keyword || '')
 const tagFilter = computed(() => route.query.tag || '')
 
+const books = ref([])
+const tags = ref([])
+
 const selectedTags = ref(tagFilter.value ? tagFilter.value.split(',').filter(Boolean) : [])
 const authorFilter = ref('')
 const ratingFilter = ref('')
 const sortBy = ref('latest')
 
-const filteredBooks = computed(() => {
-  let result = [...mockBooks]
-
-  if (keyword.value) {
-    const lower = keyword.value.toLowerCase()
-    result = result.filter(book =>
-      book.title.toLowerCase().includes(lower)
-      || book.author.toLowerCase().includes(lower)
-      || book.tags.some(tag => tag.name.toLowerCase().includes(lower))
+// 获取标签云
+const loadTags = async () => {
+  try {
+    const res = await axios.get(
+      'http://127.0.0.1:8000/api/recommendations/tags/cloud/'
     )
+    tags.value = res.data
+  } catch(err) {
+    console.error(err)
   }
+}
 
-  if (selectedTags.value.length > 0) {
-    result = result.filter(book =>
-      selectedTags.value.some(t => book.tags.some(bt => bt.name === t))
+// 获取搜索结果
+const loadBooks = async () => {
+  try {
+    const params = {}
+
+    if (keyword.value) {
+      params.keyword = keyword.value
+    }
+
+    if (selectedTags.value.length > 0) {
+      params.tags = selectedTags.value.join(',')
+    }
+
+    if (authorFilter.value) {
+      params.author = authorFilter.value
+    }
+
+    if (ratingFilter.value) {
+      params.rating = ratingFilter.value
+    }
+
+    if (sortBy.value) {
+      params.sort = sortBy.value
+    }
+
+    const res = await axios.get(
+      'http://127.0.0.1:8000/api/recommendations/search/',
+      { params }
     )
-  }
 
-  if (authorFilter.value) {
-    const lower = authorFilter.value.toLowerCase()
-    result = result.filter(book => book.author.toLowerCase().includes(lower))
-  }
+    books.value = res.data
 
-  if (ratingFilter.value) {
-    const minRating = parseFloat(ratingFilter.value)
-    result = result.filter(book => parseFloat(book.rating) >= minRating)
+  } catch(err) {
+    console.error(err)
   }
-
-  // Sort
-  switch (sortBy.value) {
-    case 'rating':
-      result.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
-      break
-    case 'popular':
-      result.sort((a, b) => b.likes - a.likes)
-      break
-    case 'latest':
-    default:
-      result.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded))
-      break
-  }
-
-  return result
-})
+}
 
 const fetchFn = (pageNum, pageSize) => {
   const start = (pageNum - 1) * pageSize
-  const items = filteredBooks.value.slice(start, start + pageSize)
-  return { items, total: filteredBooks.value.length }
+  const items = books.value.slice(start, start + pageSize)
+  return {
+    items,
+    total: books.value.length
+  }
 }
 
 const { data, page, totalPages, loading, loadPage, goToPage, reset } = usePagination({ fetchFn })
@@ -186,8 +196,11 @@ const { data, page, totalPages, loading, loadPage, goToPage, reset } = usePagina
 // Re-run pagination whenever filters change
 watch(
   [keyword, selectedTags, authorFilter, ratingFilter, sortBy],
-  () => { reset(); loadPage(1) },
-  { immediate: true }
+  async () => {
+    await loadBooks()
+    reset()
+    loadPage(1)
+  }
 )
 
 function handleTagToggle(tagName) {
@@ -216,6 +229,13 @@ function handleResetFilters() {
   sortBy.value = 'latest'
   router.replace({ query: {} })
 }
+
+// 页面初始化
+onMounted(async () => {
+  await loadTags()
+  await loadBooks()
+  loadPage(1)
+})
 </script>
 
 <style scoped>
