@@ -1,134 +1,91 @@
 <template>
   <div class="book-detail-page">
-
     <div class="container">
-
       <!-- Book Hero -->
       <section class="book-hero">
-
         <div class="book-cover">
           <img
             :src="book.cover"
             :alt="book.title"
           >
         </div>
-
         <div class="book-info">
-
           <span class="book-category">
             {{ book.category }}
           </span>
-
           <h1 class="book-title">
             {{ book?.title }}
           </h1>
-
           <h3 class="book-author">
             {{ book.author }}
           </h3>
-
           <div class="book-rating">
             ⭐ {{ averageRating }}
             <span>
               ({{ bookReviews.length }} reviews)
             </span>
           </div>
-
           <p class="book-description">
             {{ book.description }}
           </p>
-
           <div class="book-actions">
-
             <LikeButton/>
             <FavoriteButton :book="book" />
-
           </div>
-
         </div>
-
       </section>
-
       <!-- Reviews -->
-
       <section class="review-section">
-
         <h2 class="section-title">
           Reviews
         </h2>
-
         <!-- Rating Summary -->
-
         <div class="rating-summary">
-
           <div class="average-score">
             {{ averageRating }}
           </div>
-
           <div>
-
             <div class="summary-stars">
               ⭐ {{ averageRating }}/5
             </div>
-
             <p>
               Based on {{ bookReviews.length }} reviews
             </p>
-
           </div>
-
         </div>
 
-
         <!-- Review List -->
-
         <div class="review-list">
-
           <div
             v-for="review in bookReviews"
             :key="review.id"
             class="review-card"
           >
-
             <div class="review-header">
-
               <strong>
                 {{ review.username }}
               </strong>
-
               <div class="review-rating">
-
                 <span
                   v-for="star in 5"
                   :key="star"
                 >
-                  {{ star <= review.rating ? '★' : '☆' }}
+                  {{ star <= (review.rating || 0) ? '★' : '☆' }}
                 </span>
-
               </div>
-
             </div>
-
             <p class="review-content">
               {{ review.content }}
             </p>
-
             <span class="review-date">
-              {{ review.date }}
+              {{ formatDate(review.created_at) }}
             </span>
-
           </div>
-
         </div>
-
         <!-- Review Form -->
-
         <div class="review-form">
-
           <h3>Write a Review</h3>
-
           <div class="rating-selector">
-
             <span
               v-for="star in 5"
               :key="star"
@@ -137,80 +94,52 @@
             >
               {{ star <= selectedRating ? '★' : '☆' }}
             </span>
-
           </div>
-
           <textarea
             v-model="newReview"
             placeholder="Share your thoughts about this book..."
           />
-
           <button
             class="btn-submit"
             @click="submitReview"
           >
             Submit Review
           </button>
-
         </div>
-
       </section>
-
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
 import LikeButton from '../components/LikeButton.vue'
 import FavoriteButton from '../components/FavoriteButton.vue'
 import { useAuth } from '../composables/useAuth.js'
 import { useRoute } from 'vue-router'
-import { mockBooks } from '../data/mockData'
-import { reviews } from '../stores/reviewStore'
 
 const route = useRoute()
-
-const {currentUser} = useAuth()
-
+const { currentUser } = useAuth()
 const bookId = Number(route.params.id)
 
-const book = ref(
-  mockBooks. find(
-    b => b.id === bookId
-  )
-)
-
+const book = ref({})
 const liked = ref(false)
 const favourite = ref(false)
-
 const selectedRating = ref(0)
-
 const newReview = ref('')
-
-const bookReviews = computed(() =>
-  reviews.value.filter(
-    review => review.bookId === bookId
-  )
-)
+const bookReviews = ref([])
 
 const averageRating = computed(() => {
-
-  if (bookReviews.value.length === 0) {
-    return '0.0'
-  }
-
-  const total = bookReviews.value.reduce(
-    (sum, review) => sum + review.rating,
-    0
-  )
-
-  return (
-    total / bookReviews.value.length
-  ).toFixed(1)
-
+  return book.value.average_rating || 0
 })
+
+// 格式化日期
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString()
+}
 
 function toggleLike() {
   liked.value = !liked.value
@@ -220,40 +149,99 @@ function toggleFavourite() {
   favourite.value = !favourite.value
 }
 
-const submitReview = () => {
+// 获取书籍详情
+const loadBook = async () => {
+  try {
+    const res = await axios.get(
+      `http://127.0.0.1:8000/api/recommendations/books/${bookId}/`
+    )
+    book.value = res.data
+  } catch (err) {
+    console.error(err)
+  }
+}
 
+// 获取评论
+const loadComments = async () => {
+  try {
+    const res = await axios.get(
+      `http://127.0.0.1:8000/api/interactions/comments/${bookId}/`
+    )
+    bookReviews.value = res.data
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+// 提交评论
+const submitReview = async () => {
   if (!currentUser.value) {
     alert('Please log in first')
     return
   }
-
   if (!newReview.value.trim()) {
     return
   }
-
-  reviews.value.push({
-
-    id: Date.now(),
-
-    userId: currentUser.value.id,
-
-    username: currentUser.value.username,
-
-    bookId: book.value.id,
-
-    book: book.value.title,
-
-    rating: selectedRating.value,
-
-    content: newReview.value,
-
-    date: new Date().toLocaleDateString()
-
-  })
-
-  newReview.value = ''
-  selectedRating.value = 0
+  try {
+    const token = localStorage.getItem('access_token')
+    await axios.post(
+      `http://127.0.0.1:8000/api/interactions/comment/${bookId}/`,
+      {
+        content: newReview.value
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+    if (selectedRating.value > 0) {
+      await axios.post(
+        `http://127.0.0.1:8000/api/interactions/rate/${bookId}/`,
+        {
+          score: selectedRating.value
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
+    }
+    newReview.value = ''
+    selectedRating.value = 0
+    await loadComments()
+    await loadBook()
+  } catch (err) {
+    console.error(err)
+  }
 }
+
+// 自动记录浏览历史
+const addHistory = async () => {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+  try {
+    await axios.post(
+      `http://127.0.0.1:8000/api/interactions/history/add/${bookId}/`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+// 页面加载时获取数据
+onMounted(async () => {
+  await loadBook()
+  await loadComments()
+  await addHistory()
+})
 </script>
 
 <style scoped>

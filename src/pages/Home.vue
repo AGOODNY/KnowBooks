@@ -130,15 +130,132 @@
       <div class="tags-header">
         <div class="tags-title-group">
           <h3 class="tags-title">Popular Tags</h3>
-          <span class="tags-badge">{{ mockTags.length }}</span>
+          <span class="tags-badge">{{ tags.length }}</span>
         </div>
         <router-link to="/search" class="tags-link">Browse all &rarr;</router-link>
       </div>
       <p class="tags-desc">Click a tag to explore books in that category</p>
-      <TagCloud :tags="mockTags" />
+      <TagCloud :tags="tags" />
     </section>
   </div>
 </template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+import BookCard from '../components/BookCard.vue'
+import TagCloud from '../components/TagCloud.vue'
+
+const tabs = [
+  { key: 'foryou', label: 'For You' },
+  { key: 'popular', label: 'Popular' },
+  { key: 'latest', label: 'Latest' },
+]
+
+const activeTab = ref('foryou')
+
+// 数据
+const stats = ref({
+  booksRead: 0,
+  favorites: 0,
+  comments: 0
+})
+
+const tags = ref([])
+
+const recommendBooks = ref([])
+
+const popularBooks = ref([])
+
+const latestBooks = ref([])
+
+// 获取用户统计
+const loadStats = async () => {
+  const token = localStorage.getItem('access_token')
+
+  const res = await axios.get(
+    'http://127.0.0.1:8000/api/users/stats/',
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  )
+
+  stats.value = {
+    booksRead: res.data.books_read,
+    favorites: res.data.favorites,
+    comments: 0
+  }
+}
+
+// 推荐书籍
+const loadRecommendBooks = async () => {
+  const token = localStorage.getItem('access_token')
+
+  const res = await axios.get(
+    'http://127.0.0.1:8000/api/recommendations/home/?type=recommend',
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  )
+
+  recommendBooks.value = res.data
+}
+
+// 热门书籍
+const loadPopularBooks = async () => {
+  const res = await axios.get(
+    'http://127.0.0.1:8000/api/recommendations/home/?type=hot'
+  )
+
+  popularBooks.value = res.data
+}
+
+// 最新书籍
+const loadLatestBooks = async () => {
+  const res = await axios.get(
+    'http://127.0.0.1:8000/api/recommendations/home/?type=latest'
+  )
+
+  latestBooks.value = res.data
+}
+
+// 标签云
+const loadTags = async () => {
+  const res = await axios.get(
+    'http://127.0.0.1:8000/api/recommendations/tags/cloud/'
+  )
+
+  tags.value = res.data
+}
+
+// 页面初始化
+onMounted(async () => {
+  await Promise.all([
+    loadStats(),
+    loadRecommendBooks(),
+    loadPopularBooks(),
+    loadLatestBooks(),
+    loadTags()
+  ])
+})
+
+// 修改 currentBooks
+const currentBooks = computed(() => {
+  if (activeTab.value === 'foryou') {
+    return recommendBooks.value
+  }
+
+  if (activeTab.value === 'popular') {
+    return popularBooks.value
+  }
+
+  return latestBooks.value
+})
+</script>
 
 <script setup>
 import { ref, computed } from 'vue'

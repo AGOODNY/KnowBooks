@@ -3,13 +3,24 @@
 
     <div class="auth-card">
 
-      <h1>Welcome Back</h1>
+      <h1>Create Account</h1>
 
       <p class="subtitle">
-        Log in to continue your reading journey.
+        Sign up to start your reading journey.
       </p>
 
-      <form @submit.prevent="handleLogin">
+      <form @submit.prevent="handleSignup">
+
+        <div class="form-group">
+          <label>Username</label>
+
+          <input
+            v-model="username"
+            type="text"
+            placeholder="Enter your username"
+            required
+          >
+        </div>
 
         <div class="form-group">
           <label>Email</label>
@@ -37,16 +48,16 @@
           class="btn-primary"
           type="submit"
         >
-          Log In
+          Sign Up
         </button>
 
       </form>
 
       <p class="bottom-text">
-        Don't have an account?
+        Already have an account?
 
-        <span @click="router.push('/signup')">
-          Sign up
+        <span @click="router.push('/login')">
+          Log in
         </span>
       </p>
 
@@ -58,52 +69,42 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-
-import { users } from '../stores/userStore'
-import { useAuth } from '../composables/useAuth'
+import axios from 'axios'
 
 const router = useRouter()
 
+const username = ref('')
 const email = ref('')
 const password = ref('')
 
-const {
-  login,
-  isAuthenticated
-} = useAuth()
+const handleSignup = async () => {
 
-onMounted(() => {
+  try {
 
-  if (isAuthenticated.value) {
-    router.push('/home')
+    await axios.post(
+      'http://127.0.0.1:8000/api/users/register/',
+      {
+        username: username.value,
+        email: email.value,
+        password: password.value
+      }
+    )
+
+    alert('Register Success')
+
+    router.push('/login')
+
+  }
+  catch(err) {
+
+    alert(
+      err.response?.data?.error ||
+      err.response?.data?.detail ||
+      'Register Failed'
+    )
+
   }
 
-})
-
-const handleLogin = () => {
-
-  const user = users.value.find(
-    u =>
-      u.email === email.value &&
-      u.password === password.value
-  )
-
-  if (!user) {
-
-    alert('Invalid email or password')
-
-    return
-  }
-
-  const fakeToken =
-    'jwt-' + Date.now()
-
-  login({
-    user,
-    jwt: 'mock-token'
-  })
-
-  router.push('/home')
 }
 </script>
 
