@@ -11,10 +11,10 @@ try {
   parsedUser = null
 }
 
-const currentUser = ref(parsedUser)
+let storedToken = localStorage.getItem('access_token')
 
-// token
-const token = ref(localStorage.getItem('token'))
+const currentUser = ref(parsedUser)
+const token = ref(storedToken)
 
 export function useAuth() {
 
@@ -23,18 +23,22 @@ export function useAuth() {
     localStorage.setItem('user', JSON.stringify(user))
 
     token.value = jwt
-    localStorage.setItem('token', jwt)
+    localStorage.setItem('access_token', jwt)  // 改为 access_token
   }
 
   const logout = () => {
     currentUser.value = null
     token.value = null
     localStorage.removeItem('user')
-    localStorage.removeItem('token')
+    localStorage.removeItem('access_token')  // 改为 access_token
   }
 
   const isAuthenticated = computed(() => !!token.value)
-  const isAdmin = computed(() => currentUser.value?.role === 'admin')
+
+  const isAdmin = computed(() => {
+    return currentUser.value?.is_staff === true || currentUser.value?.role === 'admin'
+  })
+
   const getToken = () => token.value
 
   return {

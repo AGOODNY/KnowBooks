@@ -257,37 +257,6 @@ const currentBooks = computed(() => {
 })
 </script>
 
-<script setup>
-import { ref, computed } from 'vue'
-import BookCard from '../components/BookCard.vue'
-import TagCloud from '../components/TagCloud.vue'
-import {
-  mockUserStats,
-  mockTags,
-  getRecommendedBooks,
-  getPopularBooks,
-  getLatestBooks,
-} from '../data/mockData'
-
-const TAB_BOOKS = {
-  foryou: () => getRecommendedBooks(8),
-  popular: () => getPopularBooks(8),
-  latest: () => getLatestBooks(8),
-}
-
-const tabs = [
-  { key: 'foryou', label: 'For You' },
-  { key: 'popular', label: 'Popular' },
-  { key: 'latest', label: 'Latest' },
-]
-
-const activeTab = ref('foryou')
-const stats = mockUserStats
-const currentBooks = computed(() => TAB_BOOKS[activeTab.value]())
-const popularBooks = getPopularBooks(3)
-const latestBooks = getLatestBooks(3)
-</script>
-
 <style scoped>
 /* ===== Header ===== */
 .home-header {

@@ -3,24 +3,13 @@
 
     <div class="auth-card">
 
-      <h1>Create Account</h1>
+      <h1>Welcome Back</h1>
 
       <p class="subtitle">
-        Sign up to start your reading journey.
+        Log in to continue your reading journey.
       </p>
 
-      <form @submit.prevent="handleSignup">
-
-        <div class="form-group">
-          <label>Username</label>
-
-          <input
-            v-model="username"
-            type="text"
-            placeholder="Enter your username"
-            required
-          >
-        </div>
+      <form @submit.prevent="handleLogin">
 
         <div class="form-group">
           <label>Email</label>
@@ -48,16 +37,16 @@
           class="btn-primary"
           type="submit"
         >
-          Sign Up
+          Log In
         </button>
 
       </form>
 
       <p class="bottom-text">
-        Already have an account?
+        Don't have an account?
 
-        <span @click="router.push('/login')">
-          Log in
+        <span @click="router.push('/signup')">
+          Sign up
         </span>
       </p>
 
@@ -69,45 +58,68 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+
+import { useAuth } from '../composables/useAuth'
+
 import axios from 'axios'
 
 const router = useRouter()
 
-const username = ref('')
 const email = ref('')
 const password = ref('')
 
-const handleSignup = async () => {
+const {
+  login,
+  isAuthenticated
+} = useAuth()
+
+onMounted(() => {
+  if (isAuthenticated.value) {
+    router.push('/home')
+  }
+})
+
+const handleLogin = async () => {
 
   try {
-
-    await axios.post(
-      'http://127.0.0.1:8000/api/users/register/',
+    const res = await axios.post(
+      'http://127.0.0.1:8000/api/users/login/',
       {
-        username: username.value,
         email: email.value,
         password: password.value
       }
     )
 
-    alert('Register Success')
+    const token = res.data.access
 
-    router.push('/login')
+    // 获取当前用户信息
+    const me = await axios.get(
+      'http://127.0.0.1:8000/api/users/me/',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+
+    login({
+      user: me.data,
+      jwt: token
+    })
+
+    router.push('/home')
 
   }
-  catch(err) {
-
+  catch(err){
     alert(
       err.response?.data?.error ||
       err.response?.data?.detail ||
-      'Register Failed'
+      'Login Failed'
     )
-
   }
 
 }
 </script>
-
 
 <style scoped>
 /* Page Container */
