@@ -17,3 +17,6 @@ media/
 
 # 日志文件
 *.log
+
+# IDE 配置
+.idea/

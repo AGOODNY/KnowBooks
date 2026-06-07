@@ -11,8 +11,8 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 # 基础配置
 # ========================
 
-SECRET_KEY = 'django-insecure-y%)d#y#x%0g@kuxfm9dzvz#n@7h#0a&$er8t=n)&&b9^)8=6(_'
-DEBUG = True
+SECRET_KEY = os.getenv('SECRET_KEY')
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 ALLOWED_HOSTS = []
 
 # ========================
@@ -88,17 +88,11 @@ WSGI_APPLICATION = 'KnowBooks_backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-
-        'NAME': 'knowbooks',
-
-        'USER': 'root',
-
-        'PASSWORD': 'ny2005',
-
-        'HOST': '127.0.0.1',
-
-        'PORT': '3306',
-
+        'NAME': os.getenv('DB_NAME', 'knowbooks'),
+        'USER': os.getenv('DB_USER', 'root'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+        'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
             'charset': 'utf8mb4',
         }
