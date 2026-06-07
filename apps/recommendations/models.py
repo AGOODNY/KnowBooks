@@ -28,7 +28,11 @@ class Book(models.Model):
 
     description = models.TextField(blank=True)
 
-    cover = models.URLField(blank=True)
+    cover = models.ImageField(
+        upload_to='book_covers/',
+        blank=True,
+        null=True
+    )
 
     tags = models.ManyToManyField(
         Tag,

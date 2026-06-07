@@ -13,24 +13,30 @@ from .services import (
     update_user_favorite_count,
     update_user_comment_count
 )
+from ..recommendations.models import Book
+
 
 #点赞与取消点赞
 class ToggleLikeView(APIView):
-
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, book_id):
+    def get(self, request, book_id):
+        is_liked = Like.objects.filter(user=request.user, book_id=book_id).exists()
+        book = Book.objects.get(id=book_id)
+        return Response({
+            "is_liked": is_liked,
+            "likes_count": book.likes_count
+        })
 
+    def post(self, request, book_id):
         obj, created = Like.objects.get_or_create(
             user=request.user,
             book_id=book_id
         )
 
         if not created:
-
             obj.delete()
 
-        # 同步 Book + User（统一放最后）
         update_book_like_count(book_id)
         update_user_like_count(request.user.id)
 
@@ -38,20 +44,23 @@ class ToggleLikeView(APIView):
             "msg": "unliked" if not created else "liked"
         })
 
-#收藏和取消收藏
-class ToggleFavoriteView(APIView):
 
+class ToggleFavoriteView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, book_id):
+    def get(self, request, book_id):
+        is_favorited = Favorite.objects.filter(user=request.user, book_id=book_id).exists()
+        return Response({
+            "is_favorited": is_favorited
+        })
 
+    def post(self, request, book_id):
         obj, created = Favorite.objects.get_or_create(
             user=request.user,
             book_id=book_id
         )
 
         if not created:
-
             obj.delete()
 
         update_book_favorite_count(book_id)

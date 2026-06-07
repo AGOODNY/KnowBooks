@@ -30,11 +30,6 @@ urlpatterns = [
     ),
 
     path(
-        '',
-        include(router.urls)
-    ),
-
-    path(
         'tags/cloud/',
         TagCloudView.as_view()
     ),
@@ -42,5 +37,10 @@ urlpatterns = [
     path(
         'tags/<int:tag_id>/books/',
         TagBooksView.as_view()
+    ),
+
+    path(
+        '',
+        include(router.urls)
     ),
 ]
