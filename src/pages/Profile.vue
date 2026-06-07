@@ -116,8 +116,8 @@
             <h3>{{ book.title }}</h3>
             <p>{{ book.author }}</p>
             <span class="upload-tag" :class="statusClass(book.status)">
-  {{ book.status === 'approved' ? 'Uploaded' : (book.status === 'pending' ? 'Pending' : 'Rejected') }}
-</span>
+              {{ book.status === 'approved' ? 'Uploaded' : (book.status === 'pending' ? 'Pending' : 'Rejected') }}
+            </span>
           </div>
         </div>
       </section>
@@ -149,7 +149,6 @@
               <p>{{ review.content }}</p>
               <div class="review-footer">
                 <span class="review-date">{{ formatDate(review.created_at) }}</span>
-                <span class="review-likes">❤️ {{ review.likes_count || 0 }}</span>
               </div>
             </div>
           </router-link>
@@ -679,7 +678,12 @@ onMounted(async () => {
 
 .review-rating {
   color: #f5b301;
-  font-size: 2rem;
+}
+
+.review-footer {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-mid-gray);
 }
 
 /* Responsive */
