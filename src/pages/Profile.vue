@@ -227,20 +227,78 @@ function triggerAvatarUpload() {
   avatarInput.value.click()
 }
 
-function handleAvatarChange(event) {
+const isUploading = ref(false)
 
+async function handleAvatarChange(event) {
   const file = event.target.files[0]
-
   if (!file) return
 
-  const imageUrl = URL.createObjectURL(file)
+  // 验证文件类型
+  if (!file.type.startsWith('image/')) {
+    alert('Please upload an image file')
+    return
+  }
 
-  avatar.value = imageUrl
+  // 验证文件大小（限制 2MB）
+  if (file.size > 2 * 1024 * 1024) {
+    alert('Image size should be less than 2MB')
+    return
+  }
 
-  localStorage.setItem(
-    'avatar',
-    imageUrl
-  )
+  isUploading.value = true
+
+  try {
+    const token = localStorage.getItem('access_token')
+    if (!token) {
+      alert('Please log in first')
+      return
+    }
+
+    // 创建 FormData 上传文件
+    const formData = new FormData()
+    formData.append('avatar', file)
+
+    // 发送到后端更新用户信息
+    const response = await axios.put(
+      'http://127.0.0.1:8000/api/users/update/',
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    )
+
+    // 更新本地显示
+    const imageUrl = URL.createObjectURL(file)
+    avatar.value = imageUrl
+    
+    // 更新 localStorage 中的用户信息
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      const user = JSON.parse(storedUser)
+      user.avatar = response.data.avatar || imageUrl
+      localStorage.setItem('user', JSON.stringify(user))
+    }
+    
+    // 重新加载用户资料
+    await loadProfile()
+    
+    alert('Avatar updated successfully!')
+    
+    // 刷新页面以更新所有组件
+    setTimeout(() => {
+      window.location.reload()
+    }, 500)
+
+  } catch (err) {
+    console.error('Avatar upload failed:', err)
+    const errorMsg = err.response?.data?.error || err.response?.data?.detail || 'Upload failed'
+    alert(`Failed to upload avatar: ${errorMsg}`)
+  } finally {
+    isUploading.value = false
+  }
 }
 
 function statusClass(status) {
@@ -261,7 +319,6 @@ function goToDetail(book) {
     alert('You can only access the detail page after it is uploaded.')
   }
 }
-
 // 获取用户资料
 const loadProfile = async () => {
   const token = localStorage.getItem('access_token')
@@ -277,6 +334,17 @@ const loadProfile = async () => {
       }
     )
     profile.value = res.data
+    
+    // 处理头像 URL
+    if (profile.value.avatar) {
+      if (profile.value.avatar.startsWith('http')) {
+        avatar.value = profile.value.avatar
+      } else if (profile.value.avatar.startsWith('/media/')) {
+        avatar.value = `http://127.0.0.1:8000${profile.value.avatar}`
+      } else {
+        avatar.value = `http://127.0.0.1:8000/media/${profile.value.avatar}`
+      }
+    }
   } catch (err) {
     console.error(err)
   }

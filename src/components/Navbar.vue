@@ -30,17 +30,25 @@
           <button class="btn-text" @click="router.push('/login')">Log in</button>
           <button class="btn-primary btn-sm" @click="router.push('/signup')">Sign up</button>
         </template>
-       <div
+        <div
           v-else-if="!hideNavbarFeatures"
-          class="navbar-user"> 
-          
-          <div class="user-avatar">U</div>
-          <span class="user-name">User</span>
+          class="navbar-user"
+        > 
+          <div class="user-avatar">
+            <img 
+              v-if="userAvatar" 
+              :src="userAvatar" 
+              alt="avatar"
+              class="avatar-image"
+            />
+            <span v-else>{{ userInitial }}</span>
+          </div>
+          <span class="user-name">{{ displayName }}</span>
           <div class="user-dropdown">
             <router-link to="/profile">Profile</router-link>
             <router-link v-if="isAdmin" to="/admin">Admin</router-link>
             <hr />
-            <button class="btn-logout" @click="handleLogout" >Log out</button>
+            <button class="btn-logout" @click="handleLogout">Log out</button>
           </div>
         </div>
       </div>
@@ -54,21 +62,49 @@ import { useRoute, useRouter } from 'vue-router'
 import SearchBar from './SearchBar.vue'
 import { useAuth } from '../composables/useAuth'
 
-const { isAdmin } = useAuth()
-
 const route = useRoute()
 const router = useRouter()
-const isLanding = computed(() => route.path === '/')
-const { isAuthenticated, logout } = useAuth()
-const handleLogout = () => {
-  logout()
-  router.push('/')
-}
+const { isAuthenticated, isAdmin, currentUser, logout } = useAuth()
 
+const isLanding = computed(() => route.path === '/')
 const hideNavbarFeatures = computed(() =>
   route.path === '/login' ||
   route.path === '/signup'
 )
+
+// 获取用户显示名称
+const displayName = computed(() => {
+  if (!currentUser.value) return 'User'
+  return currentUser.value.nickname || currentUser.value.username || currentUser.value.email?.split('@')[0] || 'User'
+})
+
+// 获取用户头像URL
+const userAvatar = computed(() => {
+  if (!currentUser.value) return null
+  
+  const avatar = currentUser.value.avatar
+  if (!avatar) return null
+
+  if (avatar.startsWith('http')) {
+    return avatar
+  }
+  if (avatar.startsWith('/media/')) {
+    return `http://127.0.0.1:8000${avatar}`
+  }
+  return `http://127.0.0.1:8000/media/${avatar}`
+})
+
+// 获取用户首字母（用于默认头像）
+const userInitial = computed(() => {
+  if (!currentUser.value) return 'U'
+  const name = displayName.value
+  return name.charAt(0).toUpperCase()
+})
+
+const handleLogout = () => {
+  logout()
+  router.push('/')
+}
 </script>
 
 <style scoped>
@@ -193,13 +229,20 @@ const hideNavbarFeatures = computed(() =>
   height: 32px;
   border-radius: 50%;
   background: var(--color-mid-gray);
-  color: var(--color-light);
+  color: white;
   font-family: var(--font-heading);
   font-size: 0.8rem;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-name {
@@ -214,7 +257,7 @@ const hideNavbarFeatures = computed(() =>
   top: 100%;
   right: 0;
   padding-top: 0.5rem;
-  background: var(--color-light);
+  background: white;
   border: 1px solid var(--color-light-gray);
   border-radius: var(--radius);
   margin-top: 0;
@@ -262,6 +305,7 @@ const hideNavbarFeatures = computed(() =>
   color: var(--color-dark);
   background: none;
   transition: background 0.1s;
+  text-decoration: none;
 }
 
 .user-dropdown a:hover,
@@ -271,5 +315,7 @@ const hideNavbarFeatures = computed(() =>
 
 .btn-logout {
   color: var(--color-accent-orange) !important;
+  cursor: pointer;
+  border: none;
 }
 </style>
