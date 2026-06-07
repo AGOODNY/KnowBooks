@@ -22,7 +22,7 @@ const props = defineProps({
 const liked = ref(false)
 const likesCount = ref(0)
 
-// 获取点赞状态和数量
+
 const fetchLikeStatus = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) return
@@ -39,11 +39,11 @@ const fetchLikeStatus = async () => {
     liked.value = res.data.is_liked || false
     likesCount.value = res.data.likes_count || 0
   } catch (err) {
-    console.error('获取点赞状态失败:', err)
+    console.error('Failed to fetch like status:', err)
   }
 }
 
-// 切换点赞
+// Toggle like
 const toggleLike = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) {
@@ -53,7 +53,7 @@ const toggleLike = async () => {
 
   try {
     if (liked.value) {
-      // 取消点赞
+      // Unlike
       await axios.delete(
         `http://127.0.0.1:8000/api/interactions/like/${props.book.id}/`,
         {
@@ -64,7 +64,7 @@ const toggleLike = async () => {
       )
       likesCount.value--
     } else {
-      // 点赞
+      // Like
       await axios.post(
         `http://127.0.0.1:8000/api/interactions/like/${props.book.id}/`,
         {},
@@ -78,8 +78,8 @@ const toggleLike = async () => {
     }
     liked.value = !liked.value
   } catch (err) {
-    console.error('点赞操作失败:', err)
-    alert(err.response?.data?.error || '操作失败，请重试')
+    console.error('Like operation failed:', err)
+    alert(err.response?.data?.error || 'Operation failed, please try again')
   }
 }
 
@@ -87,7 +87,6 @@ onMounted(() => {
   fetchLikeStatus()
 })
 
-// 监听 book.id 变化，重新获取状态（如果页面内切换书籍）
 watch(() => props.book.id, () => {
   fetchLikeStatus()
 })

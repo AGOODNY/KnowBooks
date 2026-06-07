@@ -26,7 +26,7 @@ const routes = [
     name: 'admin', 
     component: Admin,
     meta: {
-    requiresAdmin: true
+      requiresAdmin: true
     } 
   },
   { path: '/recommend', name: 'recommend', component: Recommend },
@@ -39,30 +39,25 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, from, next) => {
 
+router.beforeEach((to, from, next) => {
   let user = null
 
   try {
-    const storedUser =
-      localStorage.getItem('user')
-
-    user =
-      storedUser &&
-      storedUser !== 'undefined'
-        ? JSON.parse(storedUser)
-        : null
-
+    const storedUser = localStorage.getItem('user')
+    user = storedUser && storedUser !== 'undefined'
+      ? JSON.parse(storedUser)
+      : null
   } catch {
     user = null
   }
 
-  if (
-    to.meta.requiresAdmin &&
-    user?.role !== 'admin'
-  ) {
-    next('/home')
-    return
+
+  if (to.meta.requiresAdmin) {
+    if (!user || user.is_staff !== true) {
+      next('/home')
+      return
+    }
   }
 
   next()

@@ -17,27 +17,26 @@ const props = defineProps({
 
 const isFavorited = ref(false)
 
-// 获取收藏状态
+// Fetch favorite status (backend has no GET endpoint, default to false)
 const fetchFavoriteStatus = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) return
+  
+  if (!props.book?.id) {
+    console.warn('FavoriteButton: book.id is missing', props.book)
+    return
+  }
 
   try {
-    const res = await axios.get(
-      `http://127.0.0.1:8000/api/interactions/favorite/${props.book.id}/`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    )
-    isFavorited.value = res.data.is_favorited || false
+    // Backend has no GET endpoint, cannot fetch user's favorite status
+    // Can get from localStorage or props.book, default to false if not available
+    isFavorited.value = props.book.is_favorited || false
   } catch (err) {
-    console.error('获取收藏状态失败:', err)
+    console.error('Failed to fetch favorite status:', err)
   }
 }
 
-// 切换收藏
+// Toggle favorite
 const toggleFavourite = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) {
@@ -45,34 +44,29 @@ const toggleFavourite = async () => {
     return
   }
 
+  if (!props.book?.id) {
+    console.error('FavoriteButton: Cannot toggle favorite, book.id is missing')
+    return
+  }
+
   try {
-    if (isFavorited.value) {
-      // 取消收藏
-      await axios.delete(
-        `http://127.0.0.1:8000/api/interactions/favorite/${props.book.id}/`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+    // Backend only accepts POST request to toggle favorite status
+    await axios.post(
+      `http://127.0.0.1:8000/api/interactions/favorite/${props.book.id}/`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-      )
-      isFavorited.value = false
-    } else {
-      // 添加收藏
-      await axios.post(
-        `http://127.0.0.1:8000/api/interactions/favorite/${props.book.id}/`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      )
-      isFavorited.value = true
-    }
+      }
+    )
+    
+    // Toggle local status
+    isFavorited.value = !isFavorited.value
+    
   } catch (err) {
-    console.error('收藏操作失败:', err)
-    alert(err.response?.data?.error || '操作失败，请重试')
+    console.error('Favorite operation failed:', err)
+    alert(err.response?.data?.error || 'Operation failed, please try again')
   }
 }
 
@@ -80,8 +74,10 @@ onMounted(() => {
   fetchFavoriteStatus()
 })
 
-// 监听 book.id 变化，重新获取状态（如果页面内切换书籍）
-watch(() => props.book.id, () => {
-  fetchFavoriteStatus()
+// Watch for book.id changes
+watch(() => props.book?.id, (newId) => {
+  if (newId) {
+    fetchFavoriteStatus()
+  }
 })
 </script>

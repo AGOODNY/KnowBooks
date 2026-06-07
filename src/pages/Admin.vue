@@ -53,7 +53,7 @@ const loading = ref(false)
 const loadPendingBooks = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) {
-    alert('Please log in as admin')
+    alert('Please log in first')
     return
   }
 
@@ -68,12 +68,15 @@ const loadPendingBooks = async () => {
       }
     )
     pendingBooks.value = res.data
+    console.log('Pending books:', res.data)
   } catch (err) {
-    console.error(err)
-    if (err.response?.status === 403) {
-      alert('You do not have admin permission')
+    console.error('Error details:', err.response)
+    if (err.response?.status === 401) {
+      alert('Please log in again')
+    } else if (err.response?.status === 403) {
+      alert('You do not have admin permission. Please login with an admin account.')
     } else {
-      alert('Failed to load pending books')
+      alert(`Failed to load pending books: ${err.response?.data?.detail || err.message}`)
     }
   } finally {
     loading.value = false

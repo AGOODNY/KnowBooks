@@ -29,7 +29,7 @@
             {{ book.description }}
           </p>
           <div class="book-actions">
-            <LikeButton/>
+            <LikeButton :book="book" />
             <FavoriteButton :book="book" />
           </div>
         </div>
