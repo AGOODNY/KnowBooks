@@ -239,11 +239,11 @@ async function handleAvatarChange(event) {
     return
   }
 
-  // 验证文件大小（限制 2MB）
-  if (file.size > 2 * 1024 * 1024) {
-    alert('Image size should be less than 2MB')
-    return
-  }
+  // 验证文件大小（限制 10MB）
+  if (file.size > 10 * 1024 * 1024) {
+  alert('Image size should be less than 10MB')
+  return
+}
 
   isUploading.value = true
 

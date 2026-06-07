@@ -155,7 +155,7 @@ const loadBooks = async () => {
     }
 
     if (selectedTags.value.length > 0) {
-      params.tags = selectedTags.value.join(',')
+      params.tag = selectedTags.value.join(',')  
     }
 
     if (authorFilter.value) {
@@ -163,11 +163,11 @@ const loadBooks = async () => {
     }
 
     if (ratingFilter.value) {
-      params.rating = ratingFilter.value
+      params.min_rating = ratingFilter.value 
     }
 
     if (sortBy.value) {
-      params.sort = sortBy.value
+      params.ordering = sortBy.value 
     }
 
     const res = await axios.get(
@@ -175,7 +175,7 @@ const loadBooks = async () => {
       { params }
     )
 
-    books.value = res.data
+    books.value = res.data.results || []
 
   } catch(err) {
     console.error(err)

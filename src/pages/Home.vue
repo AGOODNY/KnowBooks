@@ -154,7 +154,7 @@ const tabs = [
 
 const activeTab = ref('foryou')
 
-// 数据
+// Data
 const stats = ref({
   booksRead: 0,
   favorites: 0,
@@ -169,70 +169,108 @@ const popularBooks = ref([])
 
 const latestBooks = ref([])
 
-// 获取用户统计
+// Get user stats
 const loadStats = async () => {
   const token = localStorage.getItem('access_token')
+  if (!token) return
 
-  const res = await axios.get(
-    'http://127.0.0.1:8000/api/users/stats/',
-    {
-      headers: {
-        Authorization: `Bearer ${token}`
+  try {
+    // Get stats info
+    const statsRes = await axios.get(
+      'http://127.0.0.1:8000/api/users/stats/',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       }
-    }
-  )
+    )
 
-  stats.value = {
-    booksRead: res.data.books_read,
-    favorites: res.data.favorites,
-    comments: 0
+    // Get comments list to count
+    const commentsRes = await axios.get(
+      'http://127.0.0.1:8000/api/users/comments/',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+
+    stats.value = {
+      booksRead: statsRes.data.books_read || 0,
+      favorites: statsRes.data.favorites || 0,
+      comments: commentsRes.data.length || 0
+    }
+  } catch (err) {
+    console.error('Failed to load stats:', err)
+    stats.value = {
+      booksRead: 0,
+      favorites: 0,
+      comments: 0
+    }
   }
 }
 
-// 推荐书籍
+// Get recommendations
 const loadRecommendBooks = async () => {
   const token = localStorage.getItem('access_token')
+  if (!token) return
 
-  const res = await axios.get(
-    'http://127.0.0.1:8000/api/recommendations/home/?type=recommend',
-    {
-      headers: {
-        Authorization: `Bearer ${token}`
+  try {
+    const res = await axios.get(
+      'http://127.0.0.1:8000/api/recommendations/home/?type=recommend',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       }
-    }
-  )
+    )
 
-  recommendBooks.value = res.data
+    recommendBooks.value = res.data
+  } catch (err) {
+    console.error('Failed to load recommendations:', err)
+  }
 }
 
-// 热门书籍
+// Get popular books
 const loadPopularBooks = async () => {
-  const res = await axios.get(
-    'http://127.0.0.1:8000/api/recommendations/home/?type=hot'
-  )
+  try {
+    const res = await axios.get(
+      'http://127.0.0.1:8000/api/recommendations/home/?type=hot'
+    )
 
-  popularBooks.value = res.data
+    popularBooks.value = res.data
+  } catch (err) {
+    console.error('Failed to load popular books:', err)
+  }
 }
 
-// 最新书籍
+// Get latest books
 const loadLatestBooks = async () => {
-  const res = await axios.get(
-    'http://127.0.0.1:8000/api/recommendations/home/?type=latest'
-  )
+  try {
+    const res = await axios.get(
+      'http://127.0.0.1:8000/api/recommendations/home/?type=latest'
+    )
 
-  latestBooks.value = res.data
+    latestBooks.value = res.data
+  } catch (err) {
+    console.error('Failed to load latest books:', err)
+  }
 }
 
-// 标签云
+// Get tag cloud
 const loadTags = async () => {
-  const res = await axios.get(
-    'http://127.0.0.1:8000/api/recommendations/tags/cloud/'
-  )
+  try {
+    const res = await axios.get(
+      'http://127.0.0.1:8000/api/recommendations/tags/cloud/'
+    )
 
-  tags.value = res.data
+    tags.value = res.data
+  } catch (err) {
+    console.error('Failed to load tags:', err)
+  }
 }
 
-// 页面初始化
+// Initialize page
 onMounted(async () => {
   await Promise.all([
     loadStats(),
@@ -243,7 +281,7 @@ onMounted(async () => {
   ])
 })
 
-// 修改 currentBooks
+// Modify currentBooks
 const currentBooks = computed(() => {
   if (activeTab.value === 'foryou') {
     return recommendBooks.value
