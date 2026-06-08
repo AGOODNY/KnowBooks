@@ -38,7 +38,7 @@
           </p>
         </div>
         <div class="features-grid">
-          <div v-for="(feature, index) in mockFeatureHighlights" :key="index" class="feature-card">
+          <div v-for="(feature, index) in features" :key="index" class="feature-card">
             <div
               class="feature-icon"
               :style="{ background: feature.bgColor, color: feature.iconColor }"
@@ -87,10 +87,41 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { mockFeatureHighlights } from '../data/mockData'
 
 const router = useRouter()
 const featuresRef = ref(null)
+
+// 功能特性数据（静态）
+const features = [
+  {
+    iconKey: 'recommend',
+    title: 'Smart Recommendations',
+    description: 'Get personalized book suggestions based on your reading taste and history.',
+    bgColor: '#fef3e8',
+    iconColor: '#d9704a'
+  },
+  {
+    iconKey: 'review',
+    title: 'Authentic Reviews',
+    description: 'Read and write genuine reviews from real readers, not algorithms.',
+    bgColor: '#f0f2f5',
+    iconColor: '#4a6a8c'
+  },
+  {
+    iconKey: 'collection',
+    title: 'Collection Management',
+    description: 'Organize your books, track your reading progress, and build your library.',
+    bgColor: '#e8f1ed',
+    iconColor: '#5c8c7a'
+  },
+  {
+    iconKey: 'community',
+    title: 'Reader Community',
+    description: 'Connect with fellow readers, share insights, and discover hidden gems.',
+    bgColor: '#fdeef2',
+    iconColor: '#c97a5e'
+  }
+]
 
 function scrollToFeatures() {
   featuresRef.value?.scrollIntoView({ behavior: 'smooth' })
@@ -160,6 +191,7 @@ function scrollToFeatures() {
   padding: 0.75rem 1.9rem;
   border-radius: var(--radius);
   transition: opacity 0.15s;
+  cursor: pointer;
 }
 
 .btn-hero-primary:hover {
@@ -176,6 +208,7 @@ function scrollToFeatures() {
   border: 1px solid var(--color-light-gray);
   border-radius: var(--radius);
   transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
 }
 
 .btn-hero-secondary:hover {
@@ -332,6 +365,7 @@ function scrollToFeatures() {
   font-size: 0.8rem;
   color: var(--color-mid-gray);
   transition: color 0.15s;
+  text-decoration: none;
 }
 
 .footer-links a:hover {
