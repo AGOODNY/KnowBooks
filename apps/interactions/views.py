@@ -104,7 +104,6 @@ class RateBookView(APIView):
         })
 
 #评论
-# apps/interactions/views.py 中的 CommentView
 class CommentView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -112,7 +111,6 @@ class CommentView(APIView):
         print(f"Received comment request - book_id: {book_id}")
         print(f"Request data: {request.data}")
 
-        # 确保请求数据中只包含需要的字段
         serializer = CommentSerializer(data={
             'content': request.data.get('content', '')
         })
@@ -120,25 +118,51 @@ class CommentView(APIView):
         if not serializer.is_valid():
             print(f"Serializer errors: {serializer.errors}")
             return Response(serializer.errors, status=400)
-
-        # 保存评论
         comment = serializer.save(
             user=request.user,
             book_id=book_id
         )
 
-        # 用户评论统计同步
         update_user_comment_count(request.user.id)
 
-        # 返回序列化后的数据
         return Response(CommentSerializer(comment).data, status=201)
 
-#获取评论列表
+
+
+# 获取评论列表
 class CommentListView(APIView):
     def get(self, request, book_id):
         comments = Comment.objects.filter(book_id=book_id).order_by('-created_at')
-        serializer = CommentSerializer(comments, many=True)
-        return Response(serializer.data)
+
+        result = []
+        for comment in comments:
+            rating = None
+            try:
+                rating_obj = Rating.objects.get(user=comment.user, book_id=book_id)
+                rating = rating_obj.score
+            except Rating.DoesNotExist:
+                rating = comment.rating
+
+            avatar_url = ''
+            if comment.user.avatar:
+                if hasattr(comment.user.avatar, 'url'):
+                    avatar_url = comment.user.avatar.url
+                elif isinstance(comment.user.avatar, str):
+                    avatar_url = comment.user.avatar
+                else:
+                    avatar_url = ''
+
+            result.append({
+                "id": comment.id,
+                "username": comment.user.username,
+                "avatar": avatar_url,
+                "content": comment.content,
+                "rating": rating,
+                "created_at": comment.created_at,
+                "likes_count": comment.likes_count
+            })
+
+        return Response(result)
 
 
 #给评论点赞
