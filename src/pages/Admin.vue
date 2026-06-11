@@ -2,42 +2,53 @@
   <div class="admin-page">
     <div class="container">
       <h1>Book Approval Dashboard</h1>
-      <div v-if="loading" class="loading">Loading...</div>
-      <div v-else-if="pendingBooks.length === 0" class="empty-state">
-        <p>No pending books for approval.</p>
+      
+      <!-- 全局加载 -->
+      <div v-if="isPageLoading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading pending books...</p>
       </div>
-      <div
-        v-for="book in pendingBooks"
-        :key="book.id"
-        class="admin-card"
-      >
-        <img
-          :src="getCoverUrl(book.cover)"
-          class="admin-cover"
-          alt="cover"
-        />
-        <div>
-          <h3>{{ book.title }}</h3>
-          <p>{{ book.author }}</p>
-          <p class="uploader-info">Uploaded by: {{ book.uploaded_by?.username || book.uploaded_by?.email || 'Unknown' }}</p>
+
+      <!-- 内容区域 -->
+      <template v-else>
+        <div v-if="loading" class="loading">Loading...</div>
+        <div v-else-if="pendingBooks.length === 0" class="empty-state">
+          <p>No pending books for approval.</p>
         </div>
-        <div class="actions">
-          <button
-            class="btn-approve"
-            @click="approveBook(book)"
-            :disabled="loading"
-          >
-            Approve
-          </button>
-          <button
-            class="btn-reject"
-            @click="rejectBook(book)"
-            :disabled="loading"
-          >
-            Reject
-          </button>
+        <div
+          v-else
+          v-for="book in pendingBooks"
+          :key="book.id"
+          class="admin-card"
+        >
+          <img
+            :src="getCoverUrl(book.cover)"
+            class="admin-cover"
+            alt="cover"
+          />
+          <div>
+            <h3>{{ book.title }}</h3>
+            <p>{{ book.author }}</p>
+            <p class="uploader-info">Uploaded by: {{ book.uploaded_by?.username || book.uploaded_by?.email || 'Unknown' }}</p>
+          </div>
+          <div class="actions">
+            <button
+              class="btn-approve"
+              @click="approveBook(book)"
+              :disabled="loading"
+            >
+              Approve
+            </button>
+            <button
+              class="btn-reject"
+              @click="rejectBook(book)"
+              :disabled="loading"
+            >
+              Reject
+            </button>
+          </div>
         </div>
-      </div>
+      </template>
     </div>
   </div>
 </template>
@@ -48,6 +59,7 @@ import axios from 'axios'
 
 const pendingBooks = ref([])
 const loading = ref(false)
+const isPageLoading = ref(true)
 
 // 获取封面图片完整 URL
 const getCoverUrl = (cover) => {
@@ -66,6 +78,7 @@ const loadPendingBooks = async () => {
   const token = localStorage.getItem('access_token')
   if (!token) {
     alert('Please log in first')
+    isPageLoading.value = false
     return
   }
 
@@ -92,6 +105,7 @@ const loadPendingBooks = async () => {
     }
   } finally {
     loading.value = false
+    isPageLoading.value = false
   }
 }
 
@@ -103,6 +117,7 @@ const approveBook = async (book) => {
     return
   }
 
+  loading.value = true
   try {
     await axios.post(
       `http://127.0.0.1:8000/api/recommendations/books/${book.id}/approve/`,
@@ -118,6 +133,8 @@ const approveBook = async (book) => {
   } catch (err) {
     console.error(err)
     alert('Failed to approve book')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -129,6 +146,7 @@ const rejectBook = async (book) => {
     return
   }
 
+  loading.value = true
   try {
     await axios.post(
       `http://127.0.0.1:8000/api/recommendations/books/${book.id}/reject/`,
@@ -144,6 +162,8 @@ const rejectBook = async (book) => {
   } catch (err) {
     console.error(err)
     alert('Failed to reject book')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -210,5 +230,45 @@ onMounted(() => {
   font-size: 0.8rem;
   color: #666;
   margin-top: 4px;
+}
+
+/* Loading & Skeleton Styles */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid var(--color-light-gray, #e0e0e0);
+  border-top-color: var(--color-accent-orange, #d9704a);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem 0;
+  color: var(--color-mid-gray, #888);
+  font-size: 0.9rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 0;
+  color: var(--color-mid-gray, #888);
 }
 </style>

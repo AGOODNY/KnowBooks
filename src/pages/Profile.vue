@@ -1,6 +1,12 @@
 <template>
   <div class="profile-page">
-    <div class="container">
+    <!-- 全局加载 -->
+    <div v-if="isPageLoading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading your profile...</p>
+    </div>
+
+    <div v-else class="container">
       <!-- Header -->
       <section class="profile-header">
         <div
@@ -30,17 +36,29 @@
         </div>
       </section>
 
-      <!-- Stats -->
+      <!-- Stats - 骨架屏 -->
       <section class="stats-section">
-        <div class="stat-card">
+        <div v-if="isStatsLoading" class="stat-card skeleton-stat">
+          <div class="skeleton" style="width: 50px; height: 32px; margin: 0 auto 8px;"></div>
+          <div class="skeleton" style="width: 60px; height: 14px; margin: 0 auto;"></div>
+        </div>
+        <div v-else class="stat-card">
           <span class="stat-number">{{ stats.favorites || 0 }}</span>
           <span class="stat-label">Favorites</span>
         </div>
-        <div class="stat-card">
+        <div v-if="isStatsLoading" class="stat-card skeleton-stat">
+          <div class="skeleton" style="width: 50px; height: 32px; margin: 0 auto 8px;"></div>
+          <div class="skeleton" style="width: 60px; height: 14px; margin: 0 auto;"></div>
+        </div>
+        <div v-else class="stat-card">
           <span class="stat-number">{{ stats.books_read || 0 }}</span>
           <span class="stat-label">Books Read</span>
         </div>
-        <div class="stat-card">
+        <div v-if="isStatsLoading" class="stat-card skeleton-stat">
+          <div class="skeleton" style="width: 50px; height: 32px; margin: 0 auto 8px;"></div>
+          <div class="skeleton" style="width: 60px; height: 14px; margin: 0 auto;"></div>
+        </div>
+        <div v-else class="stat-card">
           <span class="stat-number">{{ stats.likes || 0 }}</span>
           <span class="stat-label">Likes</span>
         </div>
@@ -53,31 +71,41 @@
         </div>
 
         <div class="book-grid">
-          <div
-            class="book-card"
-            v-for="book in favourites"
-            :key="book.id"
-          >
-            <router-link
-              :to="`/book/${book.id}`"
-              class="book-link"
+          <!-- 骨架屏 -->
+          <template v-if="isFavoritesLoading">
+            <div v-for="i in 3" :key="i" class="book-card skeleton">
+              <div class="skeleton" style="width: 80px; height: 110px; margin-bottom: 0.75rem;"></div>
+              <div class="skeleton" style="width: 100%; height: 16px; margin-bottom: 8px;"></div>
+              <div class="skeleton" style="width: 60%; height: 14px;"></div>
+            </div>
+          </template>
+          <template v-else>
+            <div
+              class="book-card"
+              v-for="book in favourites"
+              :key="book.id"
             >
-              <div class="book-cover-small">
-                <img
-                  v-if="book.cover"
-                  :src="getCoverUrl(book.cover)"
-                  :alt="book.title"
-                />
-                <div v-else class="book-placeholder-small">
-                  No cover
+              <router-link
+                :to="`/book/${book.id}`"
+                class="book-link"
+              >
+                <div class="book-cover-small">
+                  <img
+                    v-if="book.cover"
+                    :src="getCoverUrl(book.cover)"
+                    :alt="book.title"
+                  />
+                  <div v-else class="book-placeholder-small">
+                    No cover
+                  </div>
                 </div>
-              </div>
-              <h3>{{ book.title }}</h3>
-              <p>{{ book.author }}</p>
-            </router-link>
-          </div>
+                <h3>{{ book.title }}</h3>
+                <p>{{ book.author }}</p>
+              </router-link>
+            </div>
+          </template>
 
-          <div v-if="favourites.length === 0" class="empty-state">
+          <div v-if="!isFavoritesLoading && favourites.length === 0" class="empty-state">
             <p>No favorite books yet.</p>
           </div>
         </div>
@@ -96,29 +124,39 @@
         </div>
 
         <div class="book-grid">
-          <div
-            class="book-card"
-            v-for="book in myUploads"
-            :key="book.id"
-            @click="goToDetail(book)"
-            :class="{ 'disabled-card': book.status !== 'Uploaded' }"
-          >
-            <div class="book-cover">
-              <img
-                v-if="book.cover"
-                :src="getCoverUrl(book.cover)"
-                alt="book cover"
-              />
-              <div v-else class="book-placeholder">
-                No cover
-              </div>
+          <!-- 骨架屏 -->
+          <template v-if="isUploadsLoading">
+            <div v-for="i in 3" :key="i" class="book-card skeleton">
+              <div class="skeleton" style="width: 120px; height: 160px; margin-bottom: 0.75rem;"></div>
+              <div class="skeleton" style="width: 100%; height: 16px; margin-bottom: 8px;"></div>
+              <div class="skeleton" style="width: 60%; height: 14px;"></div>
             </div>
-            <h3>{{ book.title }}</h3>
-            <p>{{ book.author }}</p>
-            <span class="upload-tag" :class="statusClass(book.status)">
-              {{ book.status === 'approved' ? 'Uploaded' : (book.status === 'pending' ? 'Pending' : 'Rejected') }}
-            </span>
-          </div>
+          </template>
+          <template v-else>
+            <div
+              class="book-card"
+              v-for="book in myUploads"
+              :key="book.id"
+              @click="goToDetail(book)"
+              :class="{ 'disabled-card': book.status !== 'approved' }"
+            >
+              <div class="book-cover">
+                <img
+                  v-if="book.cover"
+                  :src="getCoverUrl(book.cover)"
+                  alt="book cover"
+                />
+                <div v-else class="book-placeholder">
+                  No cover
+                </div>
+              </div>
+              <h3>{{ book.title }}</h3>
+              <p>{{ book.author }}</p>
+              <span class="upload-tag" :class="statusClass(book.status)">
+                {{ book.status === 'approved' ? 'Uploaded' : (book.status === 'pending' ? 'Pending' : 'Rejected') }}
+              </span>
+            </div>
+          </template>
         </div>
       </section>
 
@@ -128,33 +166,43 @@
           <h2>My Reviews</h2>
         </div>
 
-        <div
-          v-for="review in comments"
-          :key="review.id"
-          class="review-card-wrapper"
-        >
-          <router-link
-            :to="`/book/${review.book_id}`"
-            class="book-link"
+        <!-- 骨架屏 -->
+        <div v-if="isReviewsLoading">
+          <div v-for="i in 2" :key="i" class="review-card skeleton">
+            <div class="skeleton" style="width: 60%; height: 20px; margin-bottom: 12px;"></div>
+            <div class="skeleton" style="width: 100%; height: 60px; margin-bottom: 8px;"></div>
+            <div class="skeleton" style="width: 30%; height: 14px;"></div>
+          </div>
+        </div>
+        <template v-else>
+          <div
+            v-for="review in comments"
+            :key="review.id"
+            class="review-card-wrapper"
           >
-            <div class="review-card"> 
-              <div class="review-top">
-                <h3>{{ review.book_title }}</h3>
-                <div class="review-rating">
-                  <span v-for="star in 5" :key="star">
-                    {{ star <= (review.rating || 0) ? '★' : '☆' }}
-                  </span>
+            <router-link
+              :to="`/book/${review.book_id}`"
+              class="book-link"
+            >
+              <div class="review-card"> 
+                <div class="review-top">
+                  <h3>{{ review.book_title }}</h3>
+                  <div class="review-rating">
+                    <span v-for="star in 5" :key="star">
+                      {{ star <= (review.rating || 0) ? '★' : '☆' }}
+                    </span>
+                  </div>
+                </div>
+                <p>{{ review.content }}</p>
+                <div class="review-footer">
+                  <span class="review-date">{{ formatDate(review.created_at) }}</span>
                 </div>
               </div>
-              <p>{{ review.content }}</p>
-              <div class="review-footer">
-                <span class="review-date">{{ formatDate(review.created_at) }}</span>
-              </div>
-            </div>
-          </router-link>
-        </div>
+            </router-link>
+          </div>
+        </template>
 
-        <div v-if="comments.length === 0" class="empty-state">
+        <div v-if="!isReviewsLoading && comments.length === 0" class="empty-state">
           <p>No reviews yet.</p>
         </div>
       </section>
@@ -171,6 +219,13 @@ import { useAuth } from '../composables/useAuth'
 
 const { currentUser } = useAuth()
 const router = useRouter()
+
+// 加载状态
+const isPageLoading = ref(true)
+const isStatsLoading = ref(true)
+const isFavoritesLoading = ref(true)
+const isUploadsLoading = ref(true)
+const isReviewsLoading = ref(true)
 
 const avatarInput = ref(null)
 
@@ -194,8 +249,12 @@ const stats = ref({})
 const myUploads = ref([])
 
 const loadMyUploads = async () => {
+  isUploadsLoading.value = true
   const token = localStorage.getItem('access_token')
-  if (!token) return
+  if (!token) {
+    isUploadsLoading.value = false
+    return
+  }
 
   try {
     const res = await axios.get(
@@ -210,6 +269,8 @@ const loadMyUploads = async () => {
   } catch (err) {
     console.error('Failed to load my uploads:', err)
     myUploads.value = []
+  } finally {
+    isUploadsLoading.value = false
   }
 }
 
@@ -354,8 +415,12 @@ const loadProfile = async () => {
 
 // 获取收藏（后端现在返回完整的书籍信息）
 const loadFavorites = async () => {
+  isFavoritesLoading.value = true
   const token = localStorage.getItem('access_token')
-  if (!token) return
+  if (!token) {
+    isFavoritesLoading.value = false
+    return
+  }
 
   try {
     const res = await axios.get(
@@ -370,13 +435,19 @@ const loadFavorites = async () => {
   } catch (err) {
     console.error(err)
     favourites.value = []
+  } finally {
+    isFavoritesLoading.value = false
   }
 }
 
 // 获取评论
 const loadComments = async () => {
+  isReviewsLoading.value = true
   const token = localStorage.getItem('access_token')
-  if (!token) return
+  if (!token) {
+    isReviewsLoading.value = false
+    return
+  }
 
   try {
     const res = await axios.get(
@@ -390,13 +461,19 @@ const loadComments = async () => {
     comments.value = res.data
   } catch (err) {
     console.error(err)
+  } finally {
+    isReviewsLoading.value = false
   }
 }
 
 // 获取统计
 const loadStats = async () => {
+  isStatsLoading.value = true
   const token = localStorage.getItem('access_token')
-  if (!token) return
+  if (!token) {
+    isStatsLoading.value = false
+    return
+  }
 
   try {
     const res = await axios.get(
@@ -410,16 +487,24 @@ const loadStats = async () => {
     stats.value = res.data
   } catch (err) {
     console.error(err)
+  } finally {
+    isStatsLoading.value = false
   }
 }
 
 // 页面初始化
 onMounted(async () => {
-  await loadProfile()
-  await loadFavorites()
-  await loadComments()
-  await loadStats()
-  await loadMyUploads()
+  isPageLoading.value = true
+  
+  await Promise.all([
+    loadProfile(),
+    loadFavorites(),
+    loadComments(),
+    loadStats(),
+    loadMyUploads()
+  ])
+  
+  isPageLoading.value = false
 })
 </script>
 
@@ -684,6 +769,53 @@ onMounted(async () => {
   margin-top: 0.5rem;
   font-size: 0.8rem;
   color: var(--color-mid-gray);
+}
+
+/* Loading & Skeleton Styles */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid var(--color-light-gray);
+  border-top-color: var(--color-accent-orange);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-stat {
+  background: #fff;
 }
 
 /* Responsive */

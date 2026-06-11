@@ -8,7 +8,14 @@
         <p class="page-subtitle">
           Share a book with the KnowBooks community.
         </p>
-        <form @submit.prevent="handleSubmit">
+        
+        <!-- 页面整体加载 -->
+        <div v-if="isPageLoading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading upload form...</p>
+        </div>
+
+        <form v-else @submit.prevent="handleSubmit">
           <!-- Cover Upload -->
           <div class="form-group">
             <label>
@@ -71,7 +78,13 @@
             <label>
               Tags
             </label>
-            <div class="tags-select-container">
+            
+            <!-- 标签加载骨架屏 -->
+            <div v-if="loadingTags" class="tags-loading-skeleton">
+              <div class="skeleton" style="height: 52px; border-radius: 12px;"></div>
+            </div>
+            
+            <div v-else class="tags-select-container">
               <div 
                 class="tags-select-trigger"
                 @click="toggleDropdown"
@@ -142,10 +155,13 @@ import axios from 'axios'
 
 const router = useRouter()
 
+// 加载状态
+const isPageLoading = ref(true)
+const loadingTags = ref(false)
+
 const selectedFile = ref(null)
 const previewImage = ref('')
 const submitting = ref(false)
-const loadingTags = ref(false)
 
 // 标签相关
 const allTags = ref([])
@@ -300,9 +316,11 @@ function resetForm() {
   }
 }
 
-// 点击其他地方关闭下拉框
-onMounted(() => {
-  loadTags()
+// 页面初始化
+onMounted(async () => {
+  isPageLoading.value = true
+  await loadTags()
+  isPageLoading.value = false
   document.addEventListener('click', closeDropdown)
 })
 </script>
@@ -534,6 +552,53 @@ textarea {
 .btn-submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Loading & Skeleton Styles */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid var(--color-light-gray, #e0e0e0);
+  border-top-color: var(--color-accent-orange, #d9704a);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tags-loading-skeleton {
+  width: 100%;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 @media (max-width: 768px) {

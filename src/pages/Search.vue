@@ -1,13 +1,23 @@
 <template>
   <div class="search-page">
-    <div class="search-layout container">
+    <!-- 全局加载 -->
+    <div v-if="isPageLoading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading search results...</p>
+    </div>
+
+    <div v-else class="search-layout container">
       <!-- Sidebar Filters -->
       <aside class="search-sidebar">
         <h3 class="filter-heading">Filters</h3>
 
         <div class="filter-group">
           <label class="filter-label">Tags</label>
-          <div class="filter-tags">
+          <!-- 标签骨架屏 -->
+          <div v-if="isTagsLoading" class="filter-tags-skeleton">
+            <div v-for="i in 8" :key="i" class="skeleton skeleton-tag"></div>
+          </div>
+          <div v-else class="filter-tags">
             <button
               v-for="tag in tags"
               :key="tag.id"
@@ -64,36 +74,42 @@
           <p class="search-count">{{ books.length }} books found</p>
         </div>
 
-        <div v-if="loading" class="search-loading">Loading...</div>
-        <div v-else-if="data.length === 0" class="search-empty">
-          <p>No books match your criteria.</p>
-          <p class="search-empty-hint">Try adjusting your filters or search term.</p>
+        <!-- 结果骨架屏 -->
+        <div v-if="isBooksLoading" class="search-grid-skeleton">
+          <div v-for="i in 6" :key="i" class="skeleton skeleton-book-card"></div>
         </div>
         <template v-else>
-          <div class="search-grid">
-            <BookCard v-for="book in data" :key="book.id" :book="book" />
+          <div v-if="loading" class="search-loading">Loading...</div>
+          <div v-else-if="data.length === 0" class="search-empty">
+            <p>No books match your criteria.</p>
+            <p class="search-empty-hint">Try adjusting your filters or search term.</p>
           </div>
+          <template v-else>
+            <div class="search-grid">
+              <BookCard v-for="book in data" :key="book.id" :book="book" />
+            </div>
 
-          <!-- Pagination -->
-          <div v-if="totalPages > 1" class="pagination">
-            <button
-              class="pagination-btn"
-              :disabled="page <= 1"
-              @click="goToPage(page - 1)"
-            >
-              &larr; Previous
-            </button>
-            <span class="pagination-info">
-              Page {{ page }} of {{ totalPages }}
-            </span>
-            <button
-              class="pagination-btn"
-              :disabled="page >= totalPages"
-              @click="goToPage(page + 1)"
-            >
-              Next &rarr;
-            </button>
-          </div>
+            <!-- Pagination -->
+            <div v-if="totalPages > 1" class="pagination">
+              <button
+                class="pagination-btn"
+                :disabled="page <= 1"
+                @click="goToPage(page - 1)"
+              >
+                &larr; Previous
+              </button>
+              <span class="pagination-info">
+                Page {{ page }} of {{ totalPages }}
+              </span>
+              <button
+                class="pagination-btn"
+                :disabled="page >= totalPages"
+                @click="goToPage(page + 1)"
+              >
+                Next &rarr;
+              </button>
+            </div>
+          </template>
         </template>
       </section>
     </div>
@@ -122,6 +138,11 @@ const RATING_FILTERS = [
 const route = useRoute()
 const router = useRouter()
 
+// 加载状态
+const isPageLoading = ref(true)
+const isTagsLoading = ref(true)
+const isBooksLoading = ref(true)
+
 const keyword = computed(() => route.query.keyword || '')
 const tagFilter = computed(() => route.query.tag || '')
 
@@ -135,18 +156,23 @@ const sortBy = ref('latest')
 
 // 获取标签云
 const loadTags = async () => {
+  isTagsLoading.value = true
   try {
     const res = await axios.get(
       'http://127.0.0.1:8000/api/recommendations/tags/cloud/'
     )
     tags.value = res.data
   } catch(err) {
-    console.error(err)
+    console.error('Failed to load tags:', err)
+    tags.value = []
+  } finally {
+    isTagsLoading.value = false
   }
 }
 
 // 获取搜索结果
 const loadBooks = async () => {
+  isBooksLoading.value = true
   try {
     const params = {}
 
@@ -176,9 +202,11 @@ const loadBooks = async () => {
     )
 
     books.value = res.data.results || []
-
   } catch(err) {
-    console.error(err)
+    console.error('Failed to load books:', err)
+    books.value = []
+  } finally {
+    isBooksLoading.value = false
   }
 }
 
@@ -232,9 +260,15 @@ function handleResetFilters() {
 
 // 页面初始化
 onMounted(async () => {
-  await loadTags()
-  await loadBooks()
+  isPageLoading.value = true
+  
+  await Promise.all([
+    loadTags(),
+    loadBooks()
+  ])
+  
   loadPage(1)
+  isPageLoading.value = false
 })
 </script>
 
@@ -284,6 +318,12 @@ onMounted(async () => {
 }
 
 .filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.filter-tags-skeleton {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
@@ -397,6 +437,12 @@ onMounted(async () => {
   gap: 1rem;
 }
 
+.search-grid-skeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
 /* ===== Pagination ===== */
 .pagination {
   display: flex;
@@ -431,6 +477,60 @@ onMounted(async () => {
 .pagination-info {
   font-size: 0.85rem;
   color: var(--color-mid-gray);
+}
+
+/* Loading & Skeleton Styles */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid var(--color-light-gray);
+  border-top-color: var(--color-accent-orange);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-tag {
+  width: 60px;
+  height: 28px;
+  border-radius: 16px;
+}
+
+.skeleton-book-card {
+  height: 280px;
+  border-radius: 12px;
 }
 
 /* Responsive */
