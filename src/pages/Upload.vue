@@ -66,17 +66,49 @@
             />
           </div>
 
-          <!-- Tags -->
+          <!-- Tags - 多选下拉框 -->
           <div class="form-group">
             <label>
-              Tags (comma separated)
+              Tags
             </label>
-            <input
-              v-model="tagsInput"
-              type="text"
-              placeholder="e.g., Fiction, Fantasy, Romance"
-            />
-            <small>Separate multiple tags with commas</small>
+            <div class="tags-select-container">
+              <div 
+                class="tags-select-trigger"
+                @click="toggleDropdown"
+                :class="{ 'is-open': isDropdownOpen }"
+              >
+                <div class="selected-tags">
+                  <span v-if="selectedTags.length === 0" class="placeholder">
+                    Select tags...
+                  </span>
+                  <span v-else class="selected-count">
+                    {{ selectedTags.length }} tag(s) selected
+                  </span>
+                </div>
+                <span class="dropdown-arrow">▼</span>
+              </div>
+              
+              <div v-if="isDropdownOpen" class="tags-dropdown">
+                <div 
+                  v-for="tag in allTags" 
+                  :key="tag.id"
+                  class="tag-option"
+                  @click="toggleTag(tag)"
+                >
+                  <input 
+                    type="checkbox" 
+                    :checked="isTagSelected(tag)"
+                    @click.stop
+                  />
+                  <span class="tag-name">{{ tag.name }}</span>
+                  <span class="tag-count">({{ tag.count || 0 }})</span>
+                </div>
+                <div v-if="allTags.length === 0" class="no-tags">
+                  No tags available
+                </div>
+              </div>
+            </div>
+            <small>Select one or more tags for your book</small>
           </div>
 
           <!-- Description -->
@@ -93,7 +125,7 @@
           <button
             type="submit"
             class="btn-submit"
-            :disabled="submitting"
+            :disabled="submitting || loadingTags"
           >
             {{ submitting ? 'Uploading...' : 'Upload Book' }}
           </button>
@@ -104,7 +136,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
@@ -113,7 +145,12 @@ const router = useRouter()
 const selectedFile = ref(null)
 const previewImage = ref('')
 const submitting = ref(false)
-const tagsInput = ref('')
+const loadingTags = ref(false)
+
+// 标签相关
+const allTags = ref([])
+const selectedTags = ref([])
+const isDropdownOpen = ref(false)
 
 const book = ref({
   title: '',
@@ -122,6 +159,49 @@ const book = ref({
 })
 
 const fileInput = ref(null)
+
+// 获取所有可用标签
+const loadTags = async () => {
+  loadingTags.value = true
+  try {
+    const res = await axios.get(
+      'http://127.0.0.1:8000/api/recommendations/tags/cloud/'
+    )
+    allTags.value = res.data
+  } catch (err) {
+    console.error('Failed to load tags:', err)
+    allTags.value = []
+  } finally {
+    loadingTags.value = false
+  }
+}
+
+// 切换下拉框
+const toggleDropdown = () => {
+  isDropdownOpen.value = !isDropdownOpen.value
+}
+
+// 关闭下拉框（点击其他地方时）
+const closeDropdown = (event) => {
+  const container = document.querySelector('.tags-select-container')
+  if (container && !container.contains(event.target)) {
+    isDropdownOpen.value = false
+  }
+}
+
+// 检查标签是否被选中
+const isTagSelected = (tag) => {
+  return selectedTags.value.some(t => t.id === tag.id)
+}
+
+// 切换标签选中状态
+const toggleTag = (tag) => {
+  if (isTagSelected(tag)) {
+    selectedTags.value = selectedTags.value.filter(t => t.id !== tag.id)
+  } else {
+    selectedTags.value.push(tag)
+  }
+}
 
 function triggerFileInput() {
   fileInput.value.click()
@@ -155,16 +235,6 @@ async function handleSubmit() {
   submitting.value = true
 
   try {
-    // 处理标签：将逗号分隔的字符串转换为数组
-    let tagNames = []
-    if (tagsInput.value.trim()) {
-      tagNames = tagsInput.value
-        .split(',')
-        .map(t => t.trim())
-        .filter(t => t !== '')
-    }
-
-    // 使用 FormData（支持文件上传）
     const formData = new FormData()
     
     // 添加文本字段
@@ -177,8 +247,10 @@ async function handleSubmit() {
       formData.append('cover', selectedFile.value)
     }
     
-    if (tagNames.length > 0) {
-      formData.append('new_tag_names', JSON.stringify(tagNames))
+    if (selectedTags.value.length > 0) {
+      selectedTags.value.forEach(tag => {
+        formData.append('existing_tag_ids', tag.id)
+      })
     }
 
     const res = await axios.post(
@@ -201,8 +273,8 @@ async function handleSubmit() {
     console.error('Error response:', err.response?.data)
     
     let errorMsg = 'Upload failed. Please try again.'
-    if (err.response?.data?.new_tag_names) {
-      errorMsg = `Tag error: ${err.response.data.new_tag_names.join(', ')}`
+    if (err.response?.data?.existing_tag_ids) {
+      errorMsg = `Tag error: ${err.response.data.existing_tag_ids.join(', ')}`
     } else if (err.response?.data?.error) {
       errorMsg = err.response.data.error
     } else if (err.response?.data?.detail) {
@@ -220,13 +292,19 @@ function resetForm() {
     author: '',
     description: ''
   }
-  tagsInput.value = ''
+  selectedTags.value = []
   selectedFile.value = null
   previewImage.value = ''
   if (fileInput.value) {
     fileInput.value.value = ''
   }
 }
+
+// 点击其他地方关闭下拉框
+onMounted(() => {
+  loadTags()
+  document.addEventListener('click', closeDropdown)
+})
 </script>
 
 <style scoped>
@@ -272,6 +350,110 @@ textarea {
   border: 1px solid var(--color-light-gray);
   border-radius: 12px;
   font-size: .95rem;
+}
+
+/* 标签选择器样式 */
+.tags-select-container {
+  position: relative;
+  user-select: none;
+}
+
+.tags-select-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .9rem 1rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.tags-select-trigger:hover {
+  border-color: var(--color-accent-orange);
+}
+
+.tags-select-trigger.is-open {
+  border-color: var(--color-accent-orange);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.selected-tags {
+  flex: 1;
+}
+
+.placeholder {
+  color: #999;
+}
+
+.selected-count {
+  color: var(--color-dark);
+  font-weight: 500;
+}
+
+.dropdown-arrow {
+  color: var(--color-mid-gray);
+  font-size: 0.7rem;
+  transition: transform 0.2s;
+}
+
+.tags-select-trigger.is-open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.tags-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 250px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid var(--color-light-gray);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.tag-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.tag-option:hover {
+  background: var(--color-light-gray);
+}
+
+.tag-option input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+
+.tag-name {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--color-dark);
+}
+
+.tag-count {
+  font-size: 0.75rem;
+  color: var(--color-mid-gray);
+}
+
+.no-tags {
+  padding: 1rem;
+  text-align: center;
+  color: var(--color-mid-gray);
 }
 
 .upload-area {
